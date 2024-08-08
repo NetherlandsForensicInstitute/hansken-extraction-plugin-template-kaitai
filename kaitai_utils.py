@@ -34,8 +34,9 @@ def get_kaitai_class():
     files_in_structs = [f for f in os.listdir(path) if isfile(join(path, f))]
     ksy_file_list = list(filter(lambda f: (f.endswith(".ksy")), files_in_structs))
 
-    if len(ksy_file_list) > 1:
-        exit(-1)
+    if len(ksy_file_list) is not 1:
+        raise ValueError("ERROR: Found ", str(len(ksy_file_list)), " .ksy files in /structs, which is not exactly 1.")
+
 
     ksy_file = ksy_file_list[0]
     ksy_filename = ksy_file.split(".")[0]
