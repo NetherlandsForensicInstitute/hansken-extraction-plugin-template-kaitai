@@ -85,7 +85,7 @@ def _object_to_dict(instance: Any) -> Generator[Dict[str, Any], None, None]:
     Value: The parsed value or returning values of the fields and property method names
 
     @param instance: object that needs parsing to dictionary
-    @yield: dictionary containing parsed fields and their respective parsed values in a dictionary
+    @return: dictionary containing parsed fields and their respective parsed values in a dictionary
     """
     parameters_dict = _parameters_dict(instance)
     for key, value_object in parameters_dict.items():
@@ -95,7 +95,7 @@ def _object_to_dict(instance: Any) -> Generator[Dict[str, Any], None, None]:
             elif _is_list(value_object):
                 yield _to_lower_camel_case(key), _list_to_dict(value_object)
             elif isinstance(value_object, bytes):
-                yield _to_lower_camel_case(key), "binary data of size: " + str(len(value_object))
+                yield _to_lower_camel_case(key), "data block of size: " + str(len(value_object))
             else:
                 yield _to_lower_camel_case(key), _process_value(value_object)
 
