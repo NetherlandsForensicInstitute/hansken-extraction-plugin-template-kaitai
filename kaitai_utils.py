@@ -14,30 +14,27 @@ from kaitaistruct import KaitaiStruct
 
 
 def get_ksy_file():
-    path = "./app/structs"
+    path = os.path.relpath(os.path.join(os.path.dirname(__file__), 'structs'))
+    # path = 'structs'
 
     files_in_structs = [f for f in os.listdir(path) if isfile(join(path, f))]
     ksy_file_list = list(filter(lambda f: (f.endswith(".ksy")), files_in_structs))
 
-    if len(ksy_file_list) is not 1:
+    if len(ksy_file_list) != 1:
         raise ValueError("ERROR: Found ", str(len(ksy_file_list)), " .ksy files in /structs, which is not exactly 1.")
-    return ksy_file_list[0]
+    return os.path.join(path, ksy_file_list[0])
 
 
 def get_plugin_title_from_metadata():
-    metadata = get_kaitai_metadata()
-    title = metadata["title"]
-    if title is not None:
-        return title
-    else:
-        return metadata["id"]
-
-
-def get_kaitai_metadata():
     with open(get_ksy_file(), 'r') as file:
         ksy = yaml.safe_load(file)
 
-    return ksy["meta"]
+    metadata = ksy["meta"]
+    title = metadata["title"]
+    if title is not None:
+        return _to_camel_case(title)
+    else:
+        return _to_camel_case(metadata["id"])
 
 
 def write_to_json(data_binary: BinaryIO, writer: BufferedWriter, class_type: Type[KaitaiStruct]):
@@ -58,9 +55,9 @@ def get_kaitai_class():
     @return: Class object
     """
 
-    ksy_filename = get_ksy_file().split(".")[0]
+    ksy_filename = get_ksy_file().split(".")[0].replace('/', '.')
 
-    import_result = importlib.import_module("structs." + ksy_filename, package=None)
+    import_result = importlib.import_module(ksy_filename, package=None)
 
     return list(filter(
         lambda pair: inspect.isclass(pair[1]) and issubclass(pair[1], kaitaistruct.KaitaiStruct) and not pair[

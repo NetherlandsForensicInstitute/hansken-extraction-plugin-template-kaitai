@@ -12,15 +12,18 @@ log = Logger(__name__)
 class Plugin(ExtractionPlugin):
 
     def plugin_info(self):
-        plugin_name = kaitai_utils.get_plugin_title_from_metadata()
+        file_format = kaitai_utils.get_plugin_title_from_metadata()
+        no_space_plugin_name = file_format.replace(' ', '_')
+        plugin_name = ''.join(letter for letter in no_space_plugin_name if letter.isalnum() or letter == '_')
+        plugin_description = f'Extracts "{file_format}" files and attaches its low-level data structure as a JSON text to the trace.'
         plugin_info = PluginInfo(
-            id=PluginId(domain='{YOUR_ORGANISATION_DOMAIN}', category='extract', name=plugin_name),
-            version='1.0.0',
-            description="Extracts " + plugin_name + " files and attaches its low0level data structure as a JSON 'text' to the trace.",
+            id=PluginId(domain='NFI', category='extract', name=plugin_name),
+            version='0.0.1',
+            description=plugin_description,
             author=Author('Your name', 'your@email.address', 'your organisation'),
             maturity=MaturityLevel.PROOF_OF_CONCEPT,
             webpage_url='',  # e.g. url to the code repository of your plugin
-            matcher='$data.fileType={FILETYPE FIREFLI}',  # add the query for the firefli types of files your plugin should match
+            matcher='$data.mimeClass=archive',  # add the query for the firefli types of files your plugin should match
             license='Apache License 2.0'
         )
         return plugin_info
