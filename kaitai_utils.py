@@ -5,6 +5,7 @@ import json
 import os
 from io import BufferedWriter
 from os.path import isfile, join
+import yaml
 
 from typing import Any, BinaryIO, Dict, Generator, List, Type
 
@@ -12,6 +13,11 @@ import kaitaistruct
 from kaitaistruct import KaitaiStruct
 from json_stream import streamable_dict, streamable_list
 
+def parse_metadata():
+    path = "./app/structs"
+
+    files_in_structs = [f for f in os.listdir(path) if isfile(join(path, f))]
+    ksy_file_list = list(filter(lambda f: (f.endswith(".ksy")), files_in_structs))
 
 def write_to_json(data_binary: BinaryIO, writer: BufferedWriter, class_type: Type[KaitaiStruct]):
     """
