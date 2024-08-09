@@ -17,13 +17,13 @@ class Plugin(ExtractionPlugin):
         plugin_name = ''.join(letter for letter in no_space_plugin_name if letter.isalnum() or letter == '_')
         plugin_description = f'Extracts "{file_format}" files and attaches its low-level data structure as a JSON text to the trace.'
         plugin_info = PluginInfo(
-            id=PluginId(domain='{YOUR DOMAIN}', category='extract', name=plugin_name),
+            id=PluginId(domain='communityportal.hansken.org', category='extract', name=plugin_name),
             version='1.0.0',
             description=plugin_description,
-            author=Author('Your name', 'your@email.address', 'your organisation'),
+            author=Author('Jan', 'my@email.address', 'pim organisation'),
             maturity=MaturityLevel.PROOF_OF_CONCEPT,
             webpage_url='',  # e.g. url to the code repository of your plugin
-            matcher='$data.fileType={FILETYPE}',  # add the query for the firefli types of files your plugin should match
+            matcher='$data.mimeClass=archive',  # add the query for the firefli types of files your plugin should match
             license='Apache License 2.0'
         )
         return plugin_info
