@@ -6,16 +6,18 @@ The Kaitai plugin for Hansken, enables to parse a file using a Kaitai struct and
 - To get started developing Hansken Extraction Plugins, read the [Getting Started Documentation](https://netherlandsforensicinstitute.github.io/hansken-extraction-plugin-sdk-documentation/latest/dev/python/getting_started.html).
 - It is strongly recommended to take note of the [Hansken Extraction Plugins for plugin developers documentation](https://netherlandsforensicinstitute.github.io/hansken-extraction-plugin-sdk-documentation/latest/).
 - For more information on the supported formats by Kaitai, go to https://formats.kaitai.io/. 
-- An example implementation of a Hansken Kaitai plugin is found [here](https://github.com/NetherlandsForensicInstitute/hansken-extraction-plugin-sdk-examples/tree/main/python/appledoublekaitai).
+- An example implementation of a Hansken Kaitai plugin is found [in the extraction plugin examples repository](https://github.com/NetherlandsForensicInstitute/hansken-extraction-plugin-sdk-examples/tree/main/python/appledoublekaitai).
 
 To transform this template into an implementation, we suggest to conduct the following steps:
 * Clone the template plugin to get started on implementing your Kaitai plugin for Hansken
-* Go to [`https:/ide.kaitai.io/`](Kaitai) to download a Kaitai token. This is the ```.ksy``` file you need in the next step.
+* Go to the [kaitai_structs_formats Github](https://github.com/kaitai-io/kaitai_struct_formats/tree/acdf0733633568c68869af15846abaf1c0eaa59a) to download a Kaitai token. 
+  This is the ```.ksy``` file you need in the next step.
 * Place the *.ksy file of interest in the [`structs`](structs) directory
-* Update the plugin info in [`plugin.py`](plugin.py)
-* Make sure you set the matcher on the FireFli filetype of your interest in [`plugin.py`](plugin.py) with a suitable HQL statement
+* Update the plugin info in [`plugin.py`](plugin.py), such as:
+  * the version of your plugin, author info, and your organisation
+  * the matcher on the FireFli filetype of your interest in [`plugin.py`](plugin.py) with a suitable HQL statement
 * Create test input data in the folder [`testdata/input`](testdata/input)
-  (refer to the SDK manual for more details on how to define test data)
+  (refer to the["Test Framework" section](https://netherlandsforensicinstitute.github.io/hansken-extraction-plugin-sdk-documentation/latest/dev/concepts/test_framework.html) of the SDK manual for more details on how to define test data) 
 * Add additional dependencies for your plugin to [`requirements.in`](requirements.in) if necessary 
 * If you added additional dependencies, regenerate `requirements.txt` by calling `tox -e upgrade`
 * Add any system dependencies to the [`Dockerfile`](Dockerfile)
@@ -23,6 +25,10 @@ To transform this template into an implementation, we suggest to conduct the fol
 * Verify your expected test result data in [`testdata/result`](testdata/result)
 * Update this `README.md`
 * Publish your plugin to the Hansken community
+
+> [!TIP]
+> If you want to run the plugin from your IDE, you can add the `.ksy` file and the manually compiled `.py` files to the [structs](./structs) folder.
+
 
 Tox commands that may be useful:
 * `tox`: runs your tests
