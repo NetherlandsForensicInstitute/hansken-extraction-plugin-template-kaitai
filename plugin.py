@@ -12,10 +12,11 @@ log = Logger(__name__)
 class Plugin(ExtractionPlugin):
 
     def plugin_info(self):
+        plugin_name = kaitai_utils.get_plugin_title_from_metadata()
         plugin_info = PluginInfo(
-            id=PluginId(domain='{YOUR_ORGANISATION_DOMAIN}', category='extract', name='{FILETYPE NAME}'),
+            id=PluginId(domain='{YOUR_ORGANISATION_DOMAIN}', category='extract', name=plugin_name),
             version='1.0.0',
-            description='description of your plugin',
+            description="Extracts " + plugin_name + " files and attaches its low0level data structure as a JSON 'text' to the trace.",
             author=Author('Your name', 'your@email.address', 'your organisation'),
             maturity=MaturityLevel.PROOF_OF_CONCEPT,
             webpage_url='',  # e.g. url to the code repository of your plugin
