@@ -26,8 +26,12 @@ To transform this template into an implementation, we suggest to conduct the fol
 * Update this `README.md`
 * Publish your plugin to the Hansken community
 
-> [!TIP]
+
+> **TIP!**\
 > If you want to run the plugin from your IDE, you can add the `.ksy` file and the manually compiled `.py` files to the [structs](./structs) folder.
+
+> **WARNING!**\
+> Successful implementations of this template have only been tested on small object trees and small byte arrays. Stability and performance for large object trees and byte arrays is not warranted.
 
 
 Tox commands that may be useful:
