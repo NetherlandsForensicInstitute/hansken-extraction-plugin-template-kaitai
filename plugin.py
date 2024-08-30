@@ -29,11 +29,11 @@ class Plugin(ExtractionPlugin):
         return plugin_info
 
     def process(self, trace, data_context):
-        bytearray_length = 10
-        with trace.open(data_type='text', mode='wb') as writer:
+        bytearray_length = 64
+        with trace.open(data_type='text', mode='wb') as writer, trace.open() as data:
             kaitaiclass = kaitai_utils.get_kaitai_class()
-            with trace.open() as data:
-                kaitai_utils.write_to_json(data, writer, kaitaiclass, bytearray_length, trace)
+            json_writer = kaitai_utils.JsonWriter(writer, trace, bytearray_length)
+            json_writer.write_to_json(data, kaitaiclass)
 
 
 if __name__ == '__main__':
