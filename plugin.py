@@ -34,8 +34,8 @@ class Plugin(ExtractionPlugin):
             kaitaiclass = kaitai_utils.get_kaitai_class()
             with trace.open() as data:
                 kaitai_utils.write_to_json(data, writer, kaitaiclass, bytearray_length)
-            # with trace.open() as data:
-            #     kaitai_utils.create_bytearray_child_traces(data, kaitaiclass, trace, '$', bytearray_length)
+            with trace.open() as data:
+                kaitai_utils.create_bytearray_child_traces(data, kaitaiclass, trace, '$', bytearray_length)
 
 
 if __name__ == '__main__':

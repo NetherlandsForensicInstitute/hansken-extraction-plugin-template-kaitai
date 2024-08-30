@@ -35,12 +35,11 @@ def bytearrays_to_traces(instance: Any, trace: ExtractionTrace, path: str, lengt
     for key, value_object in parameters_dict.items():
         if not key.startswith("_") and value_object is not None:
             if _is_kaitai_struct(value_object):
-                bytearrays_to_traces(value_object, trace, path + '.' + key)
+                bytearrays_to_traces(value_object, trace, path + '.' + key, length)
             elif _is_list(value_object):
                 for value_index, value in enumerate(value_object):
-                    bytearrays_to_traces(value, trace, path + f'.[{value_index}]')
-            # elif isinstance(value_object, bytes) and len(value_object) > length:
-            elif isinstance(value_object, bytes):
+                    bytearrays_to_traces(value, trace, path + f'.[{value_index}]', length)
+            elif isinstance(value_object, bytes) and len(value_object) > length:
                 child_builder = trace.child_builder(path)
                 child_builder.update(data={'raw': value_object}).build()
 
@@ -113,16 +112,15 @@ def _object_to_dict(instance: Any, length: int) -> Generator[Dict[str, Any], Non
     for key, value_object in parameters_dict.items():
         if not key.startswith("_") and value_object is not None:
             if _is_kaitai_struct(value_object):
-                yield _to_lower_camel_case(key), _object_to_dict(value_object)
+                yield _to_lower_camel_case(key), _object_to_dict(value_object, length)
             elif _is_list(value_object):
-                yield _to_lower_camel_case(key), _list_to_dict(value_object)
+                yield _to_lower_camel_case(key), _list_to_dict(value_object, length)
             elif isinstance(value_object, bytes):
-                yield _to_lower_camel_case(key), "data block of size: " + str(len(value_object))
-                # if len(value_object) > length:
-                #     yield _to_lower_camel_case(key), "data block of size: " + str(len(value_object))
-                # else:
-                    # yield _to_lower_camel_case(key), value_object.hex()
-                    # yield _to_lower_camel_case(key), "Breaking here"
+                # yield _to_lower_camel_case(key), "data block of size: " + str(len(value_object))
+                if len(value_object) > length:
+                    yield _to_lower_camel_case(key), "data block of size: " + str(len(value_object))
+                else:
+                    yield _to_lower_camel_case(key), value_object.hex()
             else:
                 yield _to_lower_camel_case(key), _process_value(value_object)
 
@@ -184,9 +182,9 @@ def _is_list(value_object: Any) -> bool:
 
 
 @streamable_list
-def _list_to_dict(object_list: List[Any]) -> Generator[tuple[str, Any], None, None]:
+def _list_to_dict(object_list: List[Any], length: int) -> Generator[tuple[str, Any], None, None]:
     for obj in object_list:
-        yield _object_to_dict(obj)
+        yield _object_to_dict(obj, length)
 
 
 def _to_camel_case(snake_str: str) -> str:
