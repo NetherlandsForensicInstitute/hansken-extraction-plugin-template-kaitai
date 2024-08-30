@@ -13,10 +13,11 @@ from hansken_extraction_plugin.api.extraction_trace import ExtractionTrace
 from json_stream import streamable_dict, streamable_list
 from kaitaistruct import KaitaiStruct
 
-
+def _is_public_property(key: str, value: Any):
+    return not key.startswith('_') and value is not None
+    
 def get_ksy_file():
     path = os.path.relpath(os.path.join(os.path.dirname(__file__), 'structs'))
-    # path = 'structs'
 
     files_in_structs = [f for f in os.listdir(path) if isfile(join(path, f))]
     ksy_file_list = list(filter(lambda f: (f.endswith(".ksy")), files_in_structs))
@@ -24,24 +25,6 @@ def get_ksy_file():
     if len(ksy_file_list) != 1:
         raise ValueError("ERROR: Found ", str(len(ksy_file_list)), " .ksy files in /structs, which is not exactly 1.")
     return os.path.join(path, ksy_file_list[0])
-
-def create_bytearray_child_traces(data_binary: BinaryIO, class_type: Type[KaitaiStruct], trace: ExtractionTrace, path: str, length: int):
-    parsed_kaitai_struct = class_type.from_io(data_binary)
-    bytearrays_to_traces(parsed_kaitai_struct, trace, path, length)
-
-
-def bytearrays_to_traces(instance: Any, trace: ExtractionTrace, path: str, length: int):
-    parameters_dict = _parameters_dict(instance)
-    for key, value_object in parameters_dict.items():
-        if not key.startswith("_") and value_object is not None:
-            if _is_kaitai_struct(value_object):
-                bytearrays_to_traces(value_object, trace, path + '.' + key, length)
-            elif _is_list(value_object):
-                for value_index, value in enumerate(value_object):
-                    bytearrays_to_traces(value, trace, path + f'.[{value_index}]', length)
-            elif isinstance(value_object, bytes) and len(value_object) > length:
-                child_builder = trace.child_builder(path)
-                child_builder.update(data={'raw': value_object}).build()
 
 
 def get_plugin_title_from_metadata():
@@ -56,7 +39,7 @@ def get_plugin_title_from_metadata():
         return _to_camel_case(metadata["id"])
 
 
-def write_to_json(data_binary: BinaryIO, writer: BufferedWriter, class_type: Type[KaitaiStruct], length: int):
+def write_to_json(data_binary: BinaryIO, writer: BufferedWriter, class_type: Type[KaitaiStruct], length: int, trace: ExtractionTrace, path: str):
     """
     Writes a binary form of JSON string into a BufferedWriter
 
@@ -67,7 +50,7 @@ def write_to_json(data_binary: BinaryIO, writer: BufferedWriter, class_type: Typ
     up in the JSON as a hex string
     @return: JSON string representing contents of data object
     """
-    writer.write(bytes(to_json_string(data_binary, class_type, length), "utf-8"))
+    writer.write(bytes(to_json_string(data_binary, class_type, length, trace, path), "utf-8"))
 
 
 def get_kaitai_class():
@@ -86,7 +69,7 @@ def get_kaitai_class():
         inspect.getmembers(import_result)))[0][1]
 
 
-def to_json_string(data_binary: BinaryIO, class_type: Type[KaitaiStruct], length:int) -> str:
+def to_json_string(data_binary: BinaryIO, class_type: Type[KaitaiStruct], length: int, trace: ExtractionTrace, path: str) -> str:
     """
     Parses a binary data object to a JSON string
 
@@ -95,11 +78,11 @@ def to_json_string(data_binary: BinaryIO, class_type: Type[KaitaiStruct], length
     @return: JSON string representing contents of data object
     """
     parsed_kaitai_struct = class_type.from_io(data_binary)
-    return json.dumps(_object_to_dict(parsed_kaitai_struct, length), indent=2)
+    return json.dumps(_object_to_dict(parsed_kaitai_struct, length, trace, path), indent=2)
 
 
 @streamable_dict
-def _object_to_dict(instance: Any, length: int) -> Generator[Dict[str, Any], None, None]:
+def _object_to_dict(instance: Any, length: int, trace: ExtractionTrace, path: str) -> Generator[Dict[str, Any], None, None]:
     """
     Recursive helper method that parses an object to a dictionary.
     Key: The parameters and property method names
@@ -110,14 +93,15 @@ def _object_to_dict(instance: Any, length: int) -> Generator[Dict[str, Any], Non
     """
     parameters_dict = _parameters_dict(instance)
     for key, value_object in parameters_dict.items():
-        if not key.startswith("_") and value_object is not None:
+        if _is_public_property(key, value_object):
             if _is_kaitai_struct(value_object):
-                yield _to_lower_camel_case(key), _object_to_dict(value_object, length)
+                yield _to_lower_camel_case(key), _object_to_dict(value_object, length, trace, path + '.' + key)
             elif _is_list(value_object):
-                yield _to_lower_camel_case(key), _list_to_dict(value_object, length)
+                yield _to_lower_camel_case(key), _list_to_dict(value_object, length, trace, path)
             elif isinstance(value_object, bytes):
-                # yield _to_lower_camel_case(key), "data block of size: " + str(len(value_object))
                 if len(value_object) > length:
+                    child_builder = trace.child_builder(path)
+                    child_builder.update(data={'raw': value_object}).build()
                     yield _to_lower_camel_case(key), "data block of size: " + str(len(value_object))
                 else:
                     yield _to_lower_camel_case(key), value_object.hex()
@@ -182,9 +166,9 @@ def _is_list(value_object: Any) -> bool:
 
 
 @streamable_list
-def _list_to_dict(object_list: List[Any], length: int) -> Generator[tuple[str, Any], None, None]:
-    for obj in object_list:
-        yield _object_to_dict(obj, length)
+def _list_to_dict(object_list: List[Any], length: int, trace: ExtractionTrace, path: str) -> Generator[tuple[str, Any], None, None]:
+    for value_index, value in enumerate(object_list):
+        yield _object_to_dict(value, length, trace, path + f'.[{value_index}]')
 
 
 def _to_camel_case(snake_str: str) -> str:
