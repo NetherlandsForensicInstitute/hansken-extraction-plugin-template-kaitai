@@ -15,7 +15,8 @@ To transform this template into an implementation, we suggest to conduct the fol
 * Place the *.ksy file of interest in the [`structs`](structs) directory
 * Update the plugin info in [`plugin.py`](plugin.py), such as:
   * the version of your plugin, author info, and your organisation
-  * the matcher on the FireFli filetype of your interest in [`plugin.py`](plugin.py) with a suitable HQL statement
+  * the matcher on the `$data.fileType` property of your interest in [`plugin.py`](plugin.py) with a suitable HQL-Lite statement
+    (see also "[how to write a good matcher](https://netherlandsforensicinstitute.github.io/hansken-extraction-plugin-sdk-documentation/latest/dev/concepts/hql_lite.html#how-to-write-a-matcher)" in the documentation).
 * Create test input data in the folder [`testdata/input`](testdata/input)
   (refer to the["Test Framework" section](https://netherlandsforensicinstitute.github.io/hansken-extraction-plugin-sdk-documentation/latest/dev/concepts/test_framework.html) of the SDK manual for more details on how to define test data) 
 * Add additional dependencies for your plugin to [`requirements.in`](requirements.in) if necessary 

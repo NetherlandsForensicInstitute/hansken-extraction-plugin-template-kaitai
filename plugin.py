@@ -23,7 +23,10 @@ class Plugin(ExtractionPlugin):
             author=Author('{YOUR_NAME}', '{YOUR_EMAIL_ADDRESS}', '{YOUR_ORGANISATION}'),
             maturity=MaturityLevel.PROOF_OF_CONCEPT,
             webpage_url='',  # e.g. url to the code repository of your plugin
-            matcher='$data.fileType={FILETYPE_PROPERTY}',  # add the data stream fileType(s) of files your plugin should match
+            # the matcher specifies in HQL-Lite which traces will be processed by this plugin
+            #  e.g. $data.fileType=AppleDouble
+            # see also https://netherlandsforensicinstitute.github.io/hansken-extraction-plugin-sdk-documentation/latest/dev/concepts/hql_lite.html#how-to-write-a-matcher
+            matcher='$data.fileType={FILETYPE_PROPERTY}',  
             license='Apache License 2.0'
         )
         return plugin_info
