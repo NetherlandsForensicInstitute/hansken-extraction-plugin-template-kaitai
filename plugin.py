@@ -33,7 +33,7 @@ class Plugin(ExtractionPlugin):
         with trace.open(data_type='text', mode='wb') as writer:
             kaitaiclass = kaitai_utils.get_kaitai_class()
             with trace.open() as data:
-                kaitai_utils.write_to_json(data, writer, kaitaiclass, bytearray_length, trace, '$')
+                kaitai_utils.write_to_json(data, writer, kaitaiclass, bytearray_length, trace)
 
 
 if __name__ == '__main__':

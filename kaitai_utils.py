@@ -39,7 +39,7 @@ def get_plugin_title_from_metadata():
         return _to_camel_case(metadata["id"])
 
 
-def write_to_json(data_binary: BinaryIO, writer: BufferedWriter, class_type: Type[KaitaiStruct], length: int, trace: ExtractionTrace, path: str):
+def write_to_json(data_binary: BinaryIO, writer: BufferedWriter, class_type: Type[KaitaiStruct], length: int, trace: ExtractionTrace, path='$'):
     """
     Writes a binary form of JSON string into a BufferedWriter
 
