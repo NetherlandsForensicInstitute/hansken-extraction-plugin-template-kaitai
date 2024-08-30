@@ -9,6 +9,7 @@ from typing import Any, BinaryIO, Dict, Generator, List, Type
 
 import kaitaistruct
 import yaml
+from hansken_extraction_plugin.api.extraction_trace import ExtractionTrace
 from json_stream import streamable_dict, streamable_list
 from kaitaistruct import KaitaiStruct
 
@@ -24,6 +25,24 @@ def get_ksy_file():
         raise ValueError("ERROR: Found ", str(len(ksy_file_list)), " .ksy files in /structs, which is not exactly 1.")
     return os.path.join(path, ksy_file_list[0])
 
+def create_bytearray_child_traces(data_binary: BinaryIO, class_type: Type[KaitaiStruct], trace: ExtractionTrace, path: str):
+    parsed_kaitai_struct = class_type.from_io(data_binary)
+    bytearrays_to_traces(parsed_kaitai_struct, trace, path)
+
+
+def bytearrays_to_traces(instance: Any, trace: ExtractionTrace, path: str):
+    parameters_dict = _parameters_dict(instance)
+    for key, value_object in parameters_dict.items():
+        if not key.startswith("_") and value_object is not None:
+            if _is_kaitai_struct(value_object):
+                bytearrays_to_traces(value_object, trace, path + '.' + key)
+            elif _is_list(value_object):
+                for value_index, value in enumerate(value_object):
+                    bytearrays_to_traces(value, trace, path + f'.[{value_index}]')
+            elif isinstance(value_object, bytes):
+                child_builder = trace.child_builder(path)
+                child_builder.update(data={'raw': value_object}).build()
+
 
 def get_plugin_title_from_metadata():
     with open(get_ksy_file(), 'r') as file:
@@ -32,7 +51,7 @@ def get_plugin_title_from_metadata():
     metadata = ksy["meta"]
     title = metadata["title"]
     if title is not None:
-        return _to_camel_case(title)
+        return _to_camel_case(title)    
     else:
         return _to_camel_case(metadata["id"])
 

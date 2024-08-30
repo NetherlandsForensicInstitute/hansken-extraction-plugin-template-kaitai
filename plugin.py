@@ -30,7 +30,11 @@ class Plugin(ExtractionPlugin):
 
     def process(self, trace, data_context):
         with trace.open(data_type='text', mode='wb') as writer:
-            kaitai_utils.write_to_json(trace.open(), writer, kaitai_utils.get_kaitai_class())
+            kaitaiclass = kaitai_utils.get_kaitai_class()
+            with trace.open() as data:
+                kaitai_utils.write_to_json(data, writer, kaitaiclass)
+            with trace.open() as data:
+                kaitai_utils.create_bytearray_child_traces(data, kaitaiclass, trace, '$')
 
 
 if __name__ == '__main__':
