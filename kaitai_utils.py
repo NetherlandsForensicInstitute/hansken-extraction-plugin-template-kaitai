@@ -78,6 +78,8 @@ def to_json_string(data_binary: BinaryIO, class_type: Type[KaitaiStruct], trace:
     parsed_kaitai_struct = class_type.from_io(data_binary)
     return json.dumps(_object_to_dict(parsed_kaitai_struct, trace, path), indent=2)
 
+def is_public_property(key: str, value: Any):
+    return not key.startswith("_") and value is not None
 
 @streamable_dict
 def _object_to_dict(instance: Any, trace: ExtractionTrace, path: str) -> Generator[Dict[str, Any], None, None]:
@@ -91,7 +93,7 @@ def _object_to_dict(instance: Any, trace: ExtractionTrace, path: str) -> Generat
     """
     parameters_dict = _parameters_dict(instance)
     for key, value_object in parameters_dict.items():
-        if not key.startswith("_") and value_object is not None:
+        if is_public_property(key, value_object):
             if _is_kaitai_struct(value_object):
                 yield _to_lower_camel_case(key), _object_to_dict(value_object, trace, path + '.' + key)
             elif _is_list(value_object):
