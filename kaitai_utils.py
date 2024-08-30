@@ -25,12 +25,12 @@ def get_ksy_file():
         raise ValueError("ERROR: Found ", str(len(ksy_file_list)), " .ksy files in /structs, which is not exactly 1.")
     return os.path.join(path, ksy_file_list[0])
 
-def create_bytearray_child_traces(data_binary: BinaryIO, class_type: Type[KaitaiStruct], trace: ExtractionTrace, path: str):
+def create_bytearray_child_traces(data_binary: BinaryIO, class_type: Type[KaitaiStruct], trace: ExtractionTrace, path: str, length: int):
     parsed_kaitai_struct = class_type.from_io(data_binary)
-    bytearrays_to_traces(parsed_kaitai_struct, trace, path)
+    bytearrays_to_traces(parsed_kaitai_struct, trace, path, length)
 
 
-def bytearrays_to_traces(instance: Any, trace: ExtractionTrace, path: str):
+def bytearrays_to_traces(instance: Any, trace: ExtractionTrace, path: str, length: int):
     parameters_dict = _parameters_dict(instance)
     for key, value_object in parameters_dict.items():
         if not key.startswith("_") and value_object is not None:
@@ -39,6 +39,7 @@ def bytearrays_to_traces(instance: Any, trace: ExtractionTrace, path: str):
             elif _is_list(value_object):
                 for value_index, value in enumerate(value_object):
                     bytearrays_to_traces(value, trace, path + f'.[{value_index}]')
+            # elif isinstance(value_object, bytes) and len(value_object) > length:
             elif isinstance(value_object, bytes):
                 child_builder = trace.child_builder(path)
                 child_builder.update(data={'raw': value_object}).build()
@@ -56,16 +57,18 @@ def get_plugin_title_from_metadata():
         return _to_camel_case(metadata["id"])
 
 
-def write_to_json(data_binary: BinaryIO, writer: BufferedWriter, class_type: Type[KaitaiStruct]):
+def write_to_json(data_binary: BinaryIO, writer: BufferedWriter, class_type: Type[KaitaiStruct], length: int):
     """
     Writes a binary form of JSON string into a BufferedWriter
 
     @param data_binary: binary data containing the file content
     @param writer: bufferedWriter to write the binary form of the JSON string to
     @param class_type: class that contains the parsing to a KaiTai struct
+    @param length: bytearrays that are longer than length are converted to child traces, if they are shorter they show
+    up in the JSON as a hex string
     @return: JSON string representing contents of data object
     """
-    writer.write(bytes(to_json_string(data_binary, class_type), "utf-8"))
+    writer.write(bytes(to_json_string(data_binary, class_type, length), "utf-8"))
 
 
 def get_kaitai_class():
@@ -84,7 +87,7 @@ def get_kaitai_class():
         inspect.getmembers(import_result)))[0][1]
 
 
-def to_json_string(data_binary: BinaryIO, class_type: Type[KaitaiStruct]) -> str:
+def to_json_string(data_binary: BinaryIO, class_type: Type[KaitaiStruct], length:int) -> str:
     """
     Parses a binary data object to a JSON string
 
@@ -93,11 +96,11 @@ def to_json_string(data_binary: BinaryIO, class_type: Type[KaitaiStruct]) -> str
     @return: JSON string representing contents of data object
     """
     parsed_kaitai_struct = class_type.from_io(data_binary)
-    return json.dumps(_object_to_dict(parsed_kaitai_struct), indent=2)
+    return json.dumps(_object_to_dict(parsed_kaitai_struct, length), indent=2)
 
 
 @streamable_dict
-def _object_to_dict(instance: Any) -> Generator[Dict[str, Any], None, None]:
+def _object_to_dict(instance: Any, length: int) -> Generator[Dict[str, Any], None, None]:
     """
     Recursive helper method that parses an object to a dictionary.
     Key: The parameters and property method names
@@ -115,6 +118,11 @@ def _object_to_dict(instance: Any) -> Generator[Dict[str, Any], None, None]:
                 yield _to_lower_camel_case(key), _list_to_dict(value_object)
             elif isinstance(value_object, bytes):
                 yield _to_lower_camel_case(key), "data block of size: " + str(len(value_object))
+                # if len(value_object) > length:
+                #     yield _to_lower_camel_case(key), "data block of size: " + str(len(value_object))
+                # else:
+                    # yield _to_lower_camel_case(key), value_object.hex()
+                    # yield _to_lower_camel_case(key), "Breaking here"
             else:
                 yield _to_lower_camel_case(key), _process_value(value_object)
 
