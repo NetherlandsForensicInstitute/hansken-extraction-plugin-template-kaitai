@@ -58,6 +58,7 @@ class JsonWriter:
         Value: The parsed value or returning values of the fields and property method names
 
         @param instance: object that needs parsing to dictionary
+        @param path: string representing the jsonpath to the current node in the object tree
         @return: dictionary containing parsed fields and their respective parsed values in a dictionary
         """
         parameters_dict = _parameters_dict(instance)
@@ -81,6 +82,7 @@ class JsonWriter:
 
         @param data_binary: binary data containing the file content
         @param class_type: class that contains the parsing to a KaiTai struct
+        @param path: string representing the jsonpath to the current entry in the object tree
         @return: JSON string representing contents of data object
         """
         parsed_kaitai_struct = class_type.from_io(data_binary)
@@ -93,6 +95,7 @@ class JsonWriter:
         @param data_binary: binary data containing the file content
         @param writer: bufferedWriter to write the binary form of the JSON string to
         @param class_type: class that contains the parsing to a KaiTai struct
+        @param path: string representing the jsonpath to the current entry in the object tree
         @return: JSON string representing contents of data object
         """
         self.writer.write(bytes(self.to_json_string(data_binary, class_type, path), "utf-8"))
