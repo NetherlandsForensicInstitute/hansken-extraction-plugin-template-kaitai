@@ -1,23 +1,21 @@
 import enum
 import importlib
 import inspect
-import json
-import os
 from io import BufferedWriter
-from os.path import isfile, join
-from typing import Any, BinaryIO, Dict, Generator, List, Type
-
-import kaitaistruct
-import yaml
+import json
 from json_stream import streamable_dict, streamable_list
+import os
+from typing import Any, BinaryIO, Dict, Generator, List, Type
+import yaml
+
 from kaitaistruct import KaitaiStruct
 
 
-def get_ksy_file():
+def _get_ksy_file():
     path = os.path.relpath(os.path.join(os.path.dirname(__file__), 'structs'))
     # path = 'structs'
 
-    files_in_structs = [f for f in os.listdir(path) if isfile(join(path, f))]
+    files_in_structs = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
     ksy_file_list = list(filter(lambda f: (f.endswith(".ksy")), files_in_structs))
 
     if len(ksy_file_list) != 1:
@@ -25,16 +23,15 @@ def get_ksy_file():
     return os.path.join(path, ksy_file_list[0])
 
 
-def get_plugin_title_from_metadata():
-    with open(get_ksy_file(), 'r') as file:
-        ksy = yaml.safe_load(file)
+def _get_metadata():
+    with open(_get_ksy_file(), 'r') as file:
+        return yaml.safe_load(file)['meta']
 
-    metadata = ksy["meta"]
-    title = metadata["title"]
-    if title is not None:
-        return _to_camel_case(title)
-    else:
-        return _to_camel_case(metadata["id"])
+
+def get_plugin_title_from_metadata():
+    metadata = _get_metadata()
+    title = metadata['title'] if 'title' in metadata else metadata['id']
+    return _to_camel_case(title)
 
 
 def write_to_json(data_binary: BinaryIO, writer: BufferedWriter, class_type: Type[KaitaiStruct]):
@@ -55,13 +52,14 @@ def get_kaitai_class():
     @return: Class object
     """
 
-    ksy_filename = get_ksy_file().split(".")[0].replace('/', '.')
+    module_file_name = _get_metadata()['id']
+    module_path = os.path.dirname(_get_ksy_file()).replace('/', '.')
+    module_name = f'{module_path}.{module_file_name}'
 
-    import_result = importlib.import_module(ksy_filename, package=None)
+    import_result = importlib.import_module(module_name, package=None)
 
     return list(filter(
-        lambda pair: inspect.isclass(pair[1]) and issubclass(pair[1], kaitaistruct.KaitaiStruct) and not pair[
-                                                                                                             0] == "KaitaiStruct",
+        lambda pair: inspect.isclass(pair[1]) and issubclass(pair[1], KaitaiStruct) and not pair[0] == "KaitaiStruct",
         inspect.getmembers(import_result)))[0][1]
 
 
@@ -149,7 +147,7 @@ def _get_property_methods(class_type: Any) -> List[str]:
 
 
 def _is_kaitai_struct(value_object: Any) -> bool:
-    return issubclass(type(value_object), kaitaistruct.KaitaiStruct)
+    return issubclass(type(value_object), KaitaiStruct)
 
 
 def _is_list(value_object: Any) -> bool:
