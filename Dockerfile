@@ -16,15 +16,16 @@ RUN apt-get -y update; apt-get -y install curl default-jre-headless unzip findut
 RUN python -m venv /venv
 ENV PATH="/venv/bin:$PATH"
 
+RUN curl -LO https://github.com/kaitai-io/kaitai_struct_compiler/releases/download/0.10/kaitai-struct-compiler-0.10.zip
+RUN echo "3d11d6cc46d058afb4680fda2e7195f645ca03b2843501d652a529646e55d16b kaitai-struct-compiler-0.10.zip" | sha256sum -c
+RUN unzip kaitai-struct-compiler-0.10.zip
+
 COPY requirements.txt /requirements.txt
 RUN pip install -Ur /requirements.txt
 
 COPY structs/* /structs/
 RUN if [ "$(find ./structs/ -type f -name '*.ksy' | wc -l)" -ne 1 ]; then \
   (echo 'please put exactly one .ksy file in the struct-folder' && exit 1) ; fi
-RUN curl -LO https://github.com/kaitai-io/kaitai_struct_compiler/releases/download/0.10/kaitai-struct-compiler-0.10.zip
-RUN echo "3d11d6cc46d058afb4680fda2e7195f645ca03b2843501d652a529646e55d16b kaitai-struct-compiler-0.10.zip" | sha256sum -c
-RUN unzip kaitai-struct-compiler-0.10.zip
 RUN cd structs && ../kaitai-struct-compiler-0.10/bin/kaitai-struct-compiler *.ksy -t python --python-package structs
 
 
