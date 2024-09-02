@@ -40,10 +40,10 @@ def get_plugin_title_from_metadata():
 
 
 class JsonWriter:
-    def __init__(self, writer: BufferedWriter, trace: ExtractionTrace, length: int):
+    def __init__(self, writer: BufferedWriter, trace: ExtractionTrace, max_byte_array_length: int):
         self.writer = writer
         self.trace = trace
-        self.length = length
+        self.max_byte_array_length = max_byte_array_length
 
     @streamable_list
     def _list_to_dict(self, object_list: List[Any], path: str) -> Generator[
@@ -54,9 +54,9 @@ class JsonWriter:
     @streamable_dict
     def _object_to_dict(self, instance: Any, path: str) -> Generator[Dict[str, Any], None, None]:
         """
-        Recursive helper method that parses an object to a dictionary.
-        Key: The parameters and property method names
-        Value: The parsed value or returning values of the fields and property method names
+        Recursive helper method that converts an object from the Kaitai tree to (key, value) pairs that are put in
+        the resulting JSON file. Key: The parameters and property method names Value: The parsed value or returning
+        values of the fields and property method names
 
         @param instance: object that needs parsing to dictionary
         @param path: string representing the jsonpath to the current node in the object tree
@@ -70,7 +70,7 @@ class JsonWriter:
                 elif _is_list(value_object):
                     yield _to_lower_camel_case(key), self._list_to_dict(value_object, path)
                 elif isinstance(value_object, bytes):
-                    if len(value_object) > self.length:
+                    if len(value_object) > self.max_byte_array_length:
                         yield _to_lower_camel_case(key), "data block of size: " + str(len(value_object))
                         if len(value_object) < hansken_extraction_plugin.runtime.constants.MAX_CHUNK_SIZE:
                             child_builder = self.trace.child_builder(path)
@@ -127,7 +127,7 @@ def is_public_property(key: str, value: Any):
 
 def _parameters_dict(instance: Any) -> Dict[str, Any]:
     """
-    Helper method that parses an object to a dictionary.
+    Helper method that parses an object in the Kaitai object tree to a dictionary.
     Key: The parameters and property method names
     Value: The original value or returning values of the original fields and property method names
 
