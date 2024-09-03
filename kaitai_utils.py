@@ -3,6 +3,8 @@ import importlib
 import inspect
 from io import BufferedWriter
 import json
+
+from hansken_extraction_plugin.api.transformation import RangedTransformation, Range
 from json_stream import streamable_dict, streamable_list
 import os
 from typing import Any, BinaryIO, Dict, Generator, List, Type
@@ -48,11 +50,12 @@ class JsonWriter:
     @streamable_list
     def _list_to_dict(self, object_list: List[Any], path: str) -> Generator[
         tuple[str, Any], None, None]:
+
         for value_index, value in enumerate(object_list):
-            yield self._object_to_dict(value, path + f'.[{value_index}]')
+            yield self._object_to_dict(value, path + f'.[{value_index}]', None)
 
     @streamable_dict
-    def _object_to_dict(self, instance: Any, path: str) -> Generator[Dict[str, Any], None, None]:
+    def _object_to_dict(self, instance: Any, path: str, _debug: Any) -> Generator[Dict[str, Any], None, None]:
         """
         Recursive helper method that converts an object from the Kaitai tree to (key, value) pairs that are put in
         the resulting JSON file. Key: The parameters and property method names Value: The parsed value or returning
@@ -62,19 +65,26 @@ class JsonWriter:
         @param path: string representing the jsonpath to the current node in the object tree
         @return: dictionary containing parsed fields and their respective parsed values in a dictionary
         """
+        new_debug = None
         parameters_dict = _parameters_dict(instance)
+        if '_debug' in parameters_dict:
+            new_debug = parameters_dict['_debug']
         for key, value_object in parameters_dict.items():
             if is_public_property(key, value_object):
                 if _is_kaitai_struct(value_object):
-                    yield _to_lower_camel_case(key), self._object_to_dict(value_object, path + '.' + key)
+                    yield _to_lower_camel_case(key), self._object_to_dict(value_object, path + '.' + key, new_debug)
                 elif _is_list(value_object):
                     yield _to_lower_camel_case(key), self._list_to_dict(value_object, path)
                 elif isinstance(value_object, bytes):
                     if len(value_object) > self.max_byte_array_length:
                         yield _to_lower_camel_case(key), "data block of size: " + str(len(value_object))
                         if len(value_object) < hansken_extraction_plugin.runtime.constants.MAX_CHUNK_SIZE:
+                            print(f'Start: {new_debug[key]["start"]}, end: {new_debug[key]["end"]}')
+                            length = new_debug[key]['end'] - new_debug[key]['start']
                             child_builder = self.trace.child_builder(path)
-                            child_builder.update(data={'raw': value_object}).build()
+                            child_builder.add_transformation('raw', RangedTransformation([Range(new_debug[key]['start'], length)]))
+                            child_builder.build()
+                            # child_builder.update(data={'raw': value_object}).build()
                     else:
                         yield _to_lower_camel_case(key), value_object.hex()
                 else:
@@ -90,7 +100,7 @@ class JsonWriter:
         @return: JSON string representing contents of data object
         """
         parsed_kaitai_struct = class_type.from_io(data_binary)
-        return json.dumps(self._object_to_dict(parsed_kaitai_struct, path), indent=2)
+        return json.dumps(self._object_to_dict(parsed_kaitai_struct, path, None), indent=2)
 
     def write_to_json(self, data_binary: BinaryIO, class_type: Type[KaitaiStruct], path='$'):
         """
@@ -123,7 +133,7 @@ def get_kaitai_class():
 
 
 def is_public_property(key: str, value: Any):
-    return (not key.startswith("_") and value is not None) or key == '_read' or key == '_debug'
+    return (not key.startswith("_") and value is not None)
 
 
 def _parameters_dict(instance: Any) -> Dict[str, Any]:
