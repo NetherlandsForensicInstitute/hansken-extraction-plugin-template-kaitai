@@ -123,7 +123,7 @@ def get_kaitai_class():
 
 
 def is_public_property(key: str, value: Any):
-    return not key.startswith("_") and value is not None
+    return (not key.startswith("_") and value is not None) or key == '_read' or key == '_debug'
 
 
 def _parameters_dict(instance: Any) -> Dict[str, Any]:
