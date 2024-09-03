@@ -79,7 +79,6 @@ class JsonWriter:
                     if len(value_object) > self.max_byte_array_length:
                         yield _to_lower_camel_case(key), "data block of size: " + str(len(value_object))
                         if len(value_object) < hansken_extraction_plugin.runtime.constants.MAX_CHUNK_SIZE:
-                            print(f'Start: {new_debug[key]["start"]}, end: {new_debug[key]["end"]}')
                             length = new_debug[key]['end'] - new_debug[key]['start']
                             child_builder = self.trace.child_builder(path)
                             child_builder.add_transformation('raw', RangedTransformation([Range(new_debug[key]['start'], length)]))

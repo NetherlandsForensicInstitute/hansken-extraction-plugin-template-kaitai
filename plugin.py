@@ -18,16 +18,16 @@ class Plugin(ExtractionPlugin):
         plugin_name = ''.join(letter for letter in no_space_plugin_name if letter.isalnum() or letter == '_')
         plugin_description = f'Extracts "{file_format}" files and attaches its low-level data structure as a JSON text to the trace.'
         plugin_info = PluginInfo(
-            id=PluginId(domain='TeusenLuuk', category='extract', name=plugin_name),
-            version='1.0.6',
+            id=PluginId(domain='pngtest', category='extract', name=plugin_name),
+            version='1.0.7',
             description=plugin_description,
-            author=Author('TeusenLuuk', 'test', 'test'),
+            author=Author('pngtest', 'test', 'test'),
             maturity=MaturityLevel.PROOF_OF_CONCEPT,
             webpage_url='',  # e.g. url to the code repository of your plugin
             # the matcher specifies in HQL-Lite which traces will be processed by this plugin
             #  e.g. $data.fileType=AppleDouble
             # see also https://netherlandsforensicinstitute.github.io/hansken-extraction-plugin-sdk-documentation/latest/dev/concepts/hql_lite.html#how-to-write-a-matcher
-            matcher='$data.mimeClass=archive',
+            matcher='$data.mimeClass=picture',
             license='Apache License 2.0'
         )
         return plugin_info
@@ -44,5 +44,5 @@ if __name__ == '__main__':
     # optional main method to run your plugin with Hansken.py
     # see detail at:
     #  https://netherlandsforensicinstitute.github.io/hansken-extraction-plugin-sdk-documentation/latest/dev/python/hanskenpy.html
-    run_with_hanskenpy(Plugin)
-    # _test_validate_standalone(Plugin, 'testdata/input', 'testdata/result', True, False)
+    # run_with_hanskenpy(Plugin)
+    _test_validate_standalone(Plugin, 'testdata/input', 'testdata/result', True, False)
