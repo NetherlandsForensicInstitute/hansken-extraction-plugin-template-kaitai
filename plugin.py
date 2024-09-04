@@ -1,6 +1,7 @@
 from hansken_extraction_plugin.api.extraction_plugin import ExtractionPlugin
 from hansken_extraction_plugin.api.plugin_info import Author, MaturityLevel, PluginId, PluginInfo
 from hansken_extraction_plugin.runtime.extraction_plugin_runner import run_with_hanskenpy
+from hansken_extraction_plugin.test_framework.test_plugin import _test_validate_standalone
 from logbook import Logger
 
 import kaitai_utils
@@ -26,7 +27,7 @@ class Plugin(ExtractionPlugin):
             # the matcher specifies in HQL-Lite which traces will be processed by this plugin
             #  e.g. $data.fileType=AppleDouble
             # see also https://netherlandsforensicinstitute.github.io/hansken-extraction-plugin-sdk-documentation/latest/dev/concepts/hql_lite.html#how-to-write-a-matcher
-            matcher='$data.fileType={FILETYPE_PROPERTY}',  
+            matcher='$data.mimeClass=picture',
             license='Apache License 2.0'
         )
         return plugin_info
@@ -41,4 +42,7 @@ if __name__ == '__main__':
     # optional main method to run your plugin with Hansken.py
     # see detail at:
     #  https://netherlandsforensicinstitute.github.io/hansken-extraction-plugin-sdk-documentation/latest/dev/python/hanskenpy.html
-    run_with_hanskenpy(Plugin)
+    # run_with_hanskenpy(Plugin)
+
+    process = kaitai_utils.test_process()
+    _test_validate_standalone(Plugin, 'testdata/input', 'testdata/result', True, False)

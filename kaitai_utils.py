@@ -10,7 +10,6 @@ import os
 from typing import Any, BinaryIO, Dict, Generator, List, Type
 
 import hansken_extraction_plugin
-from hansken.query import Range
 from hansken_extraction_plugin.api.extraction_trace import ExtractionTrace
 import json
 
@@ -44,12 +43,34 @@ def _get_metadata():
     with open(_get_ksy_file(), 'r') as file:
         return yaml.safe_load(file)['meta']
 
-def token_has_process():
+def token_has_process2(object):
+    if type(object) is dict:
+        for key in object.keys():
+            return 'process' in object or token_has_process2(object[key])
+    elif type(object) is list:
+        for item in object:
+            return False or token_has_process2(item)
+    else:
+
+
+
+def token_has_process(dictionary: dict):
+    if 'process' in dictionary:
+        return True
+    for key in dictionary.keys():
+        if type(dictionary[key]) is dict:
+            return token_has_process(dictionary[key])
+        elif type(dictionary[key]) is list:
+            for item in dictionary[key]:
+                if type(dictionary[key]) is dict:
+                    return token_has_process(item)
+    return False
+
+
+def test_process():
     with open(_get_ksy_file(), 'r') as file:
-        seq = yaml.safe_load(file)['seq']
-        if 'process' in seq:
-            return True
-        return False
+        toplevel_dict = yaml.safe_load(file)
+        return token_has_process2(toplevel_dict)
 
 
 def get_plugin_title_from_metadata():
@@ -72,7 +93,6 @@ def get_kaitai_class():
     return list(filter(
         lambda pair: inspect.isclass(pair[1]) and issubclass(pair[1], KaitaiStruct) and not pair[0] == "KaitaiStruct",
         inspect.getmembers(import_result)))[0][1]
-
 
 
 class KaitaiToTraceWriter:
@@ -116,7 +136,8 @@ class KaitaiToTraceWriter:
                         if len(value_object) < hansken_extraction_plugin.runtime.constants.MAX_CHUNK_SIZE:
                             length = new_debug[key]['end'] - new_debug[key]['start']
                             child_builder = self.trace.child_builder(path)
-                            child_builder.add_transformation('raw', RangedTransformation([Range(new_debug[key]['start'], length)]))
+                            child_builder.add_transformation('raw', RangedTransformation(
+                                [Range(new_debug[key]['start'], length)]))
                             child_builder.build()
                             # child_builder.update(data={'raw': value_object}).build()
                     else:
