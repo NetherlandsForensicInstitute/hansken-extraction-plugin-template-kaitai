@@ -43,21 +43,21 @@ def _get_metadata():
     with open(_get_ksy_file(), 'r') as file:
         return yaml.safe_load(file)['meta']
 
+
 def token_has_process2(object):
     if type(object) is dict:
         for key in object.keys():
             if 'process' in object:
                 return True
             if type(object[key]) is list or type(object[key]) is dict:
-                 if token_has_process2(object[key]):
-                     return True
+                if token_has_process2(object[key]):
+                    return True
     elif type(object) is list:
         for item in object:
             if type(item) is list or type(item) is dict:
                 if token_has_process2(item):
                     return True
     return False
-
 
 
 def token_has_process(dictionary: dict):
