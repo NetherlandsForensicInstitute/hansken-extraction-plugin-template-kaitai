@@ -44,49 +44,26 @@ def _get_metadata():
         return yaml.safe_load(file)['meta']
 
 
-def token_has_process2(object):
+def search_process_key(object):
     if type(object) is dict:
         for key in object.keys():
             if 'process' in object:
                 return True
             if type(object[key]) is list or type(object[key]) is dict:
-                if token_has_process2(object[key]):
+                if search_process_key(object[key]):
                     return True
     elif type(object) is list:
         for item in object:
             if type(item) is list or type(item) is dict:
-                if token_has_process2(item):
+                if search_process_key(item):
                     return True
     return False
 
-def token_has_process3(sequence):
-    print("im triggered")
-    if 'process' in sequence:
-        print("LOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOK")
-        return True
-    for e in iter(sequence):
-        return token_has_process(sequence[e])
 
-    print("RETURNING FALSE")
-    return False
-
-def token_has_process(dictionary: dict):
-    if 'process' in dictionary:
-        return True
-    for key in dictionary.keys():
-        if type(dictionary[key]) is dict:
-            return token_has_process(dictionary[key])
-        elif type(dictionary[key]) is list:
-            for item in dictionary[key]:
-                if type(dictionary[key]) is dict:
-                    return token_has_process(item)
-    return False
-
-
-def test_process():
+def token_has_process():
     with open(_get_ksy_file(), 'r') as file:
         toplevel_dict = yaml.safe_load(file)
-        return token_has_process2(toplevel_dict)
+        return search_process_key(toplevel_dict)
 
 
 def get_plugin_title_from_metadata():
@@ -116,6 +93,7 @@ class KaitaiToTraceWriter:
         self.writer = writer
         self.trace = trace
         self.max_byte_array_length = max_byte_array_length
+        self.has_process = token_has_process()
 
     @streamable_list
     def _list_to_dict(self, object_list: List[Any], path: str) -> Generator[
@@ -152,10 +130,12 @@ class KaitaiToTraceWriter:
                         if len(value_object) < hansken_extraction_plugin.runtime.constants.MAX_CHUNK_SIZE:
                             length = new_debug[key]['end'] - new_debug[key]['start']
                             child_builder = self.trace.child_builder(path)
-                            child_builder.add_transformation('raw', RangedTransformation(
+                            if self.has_process:
+                                child_builder.update(data={'raw': value_object}).build()
+                            else:
+                                child_builder.add_transformation('raw', RangedTransformation(
                                 [Range(new_debug[key]['start'], length)]))
-                            child_builder.build()
-                            # child_builder.update(data={'raw': value_object}).build()
+                                child_builder.build()
                     else:
                         yield _to_lower_camel_case(key), value_object.hex()
                 else:

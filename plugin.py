@@ -42,7 +42,4 @@ if __name__ == '__main__':
     # optional main method to run your plugin with Hansken.py
     # see detail at:
     #  https://netherlandsforensicinstitute.github.io/hansken-extraction-plugin-sdk-documentation/latest/dev/python/hanskenpy.html
-    # run_with_hanskenpy(Plugin)
-
-    process = kaitai_utils.test_process()
-    _test_validate_standalone(Plugin, 'testdata/input', 'testdata/result', True, False)
+    run_with_hanskenpy(Plugin)
