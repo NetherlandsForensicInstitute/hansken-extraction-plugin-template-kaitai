@@ -50,7 +50,7 @@ def token_has_process2(object):
     elif type(object) is list:
         for item in object:
             return False or token_has_process2(item)
-    else:
+
 
 
 
@@ -66,11 +66,24 @@ def token_has_process(dictionary: dict):
                     return token_has_process(item)
     return False
 
+def token_has_process3(sequence):
+    print("im triggered")
+    if 'process' in sequence:
+        print("LOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOK")
+        return True
+    for e in iter(sequence):
+        return token_has_process(sequence[e])
+
+    print("RETURNING FALSE")
+    return False
+
+
+
 
 def test_process():
     with open(_get_ksy_file(), 'r') as file:
         toplevel_dict = yaml.safe_load(file)
-        return token_has_process2(toplevel_dict)
+        return token_has_process3(toplevel_dict)
 
 
 def get_plugin_title_from_metadata():
