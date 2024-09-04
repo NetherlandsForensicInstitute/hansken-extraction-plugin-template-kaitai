@@ -58,6 +58,16 @@ def token_has_process2(object):
                     return True
     return False
 
+def token_has_process3(sequence):
+    print("im triggered")
+    if 'process' in sequence:
+        print("LOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOK")
+        return True
+    for e in iter(sequence):
+        return token_has_process(sequence[e])
+
+    print("RETURNING FALSE")
+    return False
 
 
 def token_has_process(dictionary: dict):
