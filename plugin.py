@@ -6,7 +6,6 @@ from logbook import Logger
 
 import kaitai_utils
 
-
 log = Logger(__name__)
 
 
@@ -34,6 +33,7 @@ class Plugin(ExtractionPlugin):
 
     def process(self, trace, data_context):
         bytearray_length = 10
+        kaitai_utils.token_has_process()
         with trace.open(data_type='text', mode='wb') as writer, trace.open() as data:
             kaitaiclass = kaitai_utils.get_kaitai_class()
             json_writer = kaitai_utils.JsonWriter(writer, trace, bytearray_length)

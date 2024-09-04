@@ -34,6 +34,13 @@ def _get_metadata():
     with open(_get_ksy_file(), 'r') as file:
         return yaml.safe_load(file)['meta']
 
+def token_has_process():
+    with open(_get_ksy_file(), 'r') as file:
+        seq = yaml.safe_load(file)['seq']
+        if 'process' in seq:
+            return True
+        return False
+
 
 def get_plugin_title_from_metadata():
     metadata = _get_metadata()
