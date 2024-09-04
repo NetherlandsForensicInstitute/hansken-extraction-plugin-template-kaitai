@@ -46,11 +46,17 @@ def _get_metadata():
 def token_has_process2(object):
     if type(object) is dict:
         for key in object.keys():
-            return 'process' in object or token_has_process2(object[key])
+            if 'process' in object:
+                return True
+            if type(object[key]) is list or type(object[key]) is dict:
+                 if token_has_process2(object[key]):
+                     return True
     elif type(object) is list:
         for item in object:
-            return False or token_has_process2(item)
-
+            if type(item) is list or type(item) is dict:
+                if token_has_process2(item):
+                    return True
+    return False
 
 
 
@@ -66,24 +72,11 @@ def token_has_process(dictionary: dict):
                     return token_has_process(item)
     return False
 
-def token_has_process3(sequence):
-    print("im triggered")
-    if 'process' in sequence:
-        print("LOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOK")
-        return True
-    for e in iter(sequence):
-        return token_has_process(sequence[e])
-
-    print("RETURNING FALSE")
-    return False
-
-
-
 
 def test_process():
     with open(_get_ksy_file(), 'r') as file:
         toplevel_dict = yaml.safe_load(file)
-        return token_has_process3(toplevel_dict)
+        return token_has_process2(toplevel_dict)
 
 
 def get_plugin_title_from_metadata():
