@@ -14,10 +14,10 @@ from kaitaistruct import KaitaiStruct
 import yaml
 
 
-def write_kaitai_to_trace(trace: ExtractionTrace):
+def write_kaitai_to_trace(trace: ExtractionTrace, max_bytearray_length: int):
     with trace.open(data_type='text', mode='wb') as writer, trace.open() as data:
         kaitaiclass = get_kaitai_class()
-        kaitai_to_trace_writer = KaitaiToTraceWriter(writer, trace)
+        kaitai_to_trace_writer = KaitaiToTraceWriter(writer, trace, max_bytearray_length)
         kaitai_to_trace_writer.write_to_trace(data, kaitaiclass)
 
 
@@ -77,8 +77,9 @@ class KaitaiToTraceWriter:
     def _object_to_dict(self, instance: Any, path: str) -> Generator[Dict[str, Any], None, None]:
         """
         Recursive helper method that converts an object from the Kaitai tree to (key, value) pairs that are put in
-        the resulting JSON file. Key: The parameters and property method names Value: The parsed value or returning
-        values of the fields and property method names
+        the resulting JSON file.
+        Key: The parameters and property method names
+        Value: The parsed value or returning values of the fields and property method names
 
         @param instance: object that needs parsing to dictionary
         @param path: string representing the jsonpath to the current node in the object tree
