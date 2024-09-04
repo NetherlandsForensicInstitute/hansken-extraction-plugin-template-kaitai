@@ -14,10 +14,10 @@ from kaitaistruct import KaitaiStruct
 import yaml
 
 
-def write_kaitai_to_trace(trace: ExtractionTrace, max_bytearray_length: int):
+def write_kaitai_to_trace(trace: ExtractionTrace, max_byte_array_length: int):
     with trace.open(data_type='text', mode='wb') as writer, trace.open() as data:
         kaitaiclass = get_kaitai_class()
-        kaitai_to_trace_writer = KaitaiToTraceWriter(writer, trace, max_bytearray_length)
+        kaitai_to_trace_writer = KaitaiToTraceWriter(writer, trace, max_byte_array_length)
         kaitai_to_trace_writer.write_to_trace(data, kaitaiclass)
 
 
@@ -60,7 +60,6 @@ def get_kaitai_class():
         inspect.getmembers(import_result)))[0][1]
 
 
-
 class KaitaiToTraceWriter:
     def __init__(self, writer: BufferedWriter, trace: ExtractionTrace, max_byte_array_length: int):
         self.writer = writer
@@ -94,10 +93,12 @@ class KaitaiToTraceWriter:
                     yield _to_lower_camel_case(key), self._list_to_dict(value_object, path)
                 elif isinstance(value_object, bytes):
                     if len(value_object) > self.max_byte_array_length:
-                        yield _to_lower_camel_case(key), "data block of size: " + str(len(value_object))
                         if len(value_object) < hansken_extraction_plugin.runtime.constants.MAX_CHUNK_SIZE:
                             child_builder = self.trace.child_builder(path)
                             child_builder.update(data={'raw': value_object}).build()
+                            yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
+                        else:
+                            yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (not added as child trace because size exceeds MAX_CHUNK_SIZE)'
                     else:
                         yield _to_lower_camel_case(key), value_object.hex()
                 else:
