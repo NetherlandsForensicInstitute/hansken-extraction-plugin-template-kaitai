@@ -15,14 +15,15 @@ To transform this template into an implementation, we suggest to conduct the fol
 * Place the *.ksy file of interest in the [`structs`](structs) directory
 * Update the plugin info in [`plugin.py`](plugin.py), such as:
   * the version of your plugin, author info, and your organisation
-  * the matcher on the FireFli filetype of your interest in [`plugin.py`](plugin.py) with a suitable HQL statement
-* Create test input data in the folder [`testdata/input`](testdata/input)
+  * the matcher on the `$data.fileType` property of your interest in [`plugin.py`](plugin.py) with a suitable HQL-Lite statement
+    (see also "[how to write a good matcher](https://netherlandsforensicinstitute.github.io/hansken-extraction-plugin-sdk-documentation/latest/dev/concepts/hql_lite.html#how-to-write-a-matcher)" in the documentation).
+* (optional) Add additional dependencies for your plugin to [`requirements.in`](requirements.in) if necessary 
+  * If you added additional dependencies, regenerate `requirements.txt` by calling `tox -e upgrade`
+* (optional) Add any system dependencies to the [`Dockerfile`](Dockerfile)
+* (**recommended**) Create test input data in the folder [`testdata/input`](testdata/input)
   (refer to the["Test Framework" section](https://netherlandsforensicinstitute.github.io/hansken-extraction-plugin-sdk-documentation/latest/dev/concepts/test_framework.html) of the SDK manual for more details on how to define test data) 
-* Add additional dependencies for your plugin to [`requirements.in`](requirements.in) if necessary 
-* If you added additional dependencies, regenerate `requirements.txt` by calling `tox -e upgrade`
-* Add any system dependencies to the [`Dockerfile`](Dockerfile)
-* (Re)generate your expected test result data with `tox -e regenerate`
-* Verify your expected test result data in [`testdata/result`](testdata/result)
+  * (Re)generate your expected test result data with `tox -e regenerate`
+  * Verify your expected test result data in [`testdata/result`](testdata/result)
 * Update this `README.md`
 * Publish your plugin to the Hansken community
 

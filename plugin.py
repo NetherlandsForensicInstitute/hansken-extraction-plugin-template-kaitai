@@ -17,13 +17,16 @@ class Plugin(ExtractionPlugin):
         plugin_name = ''.join(letter for letter in no_space_plugin_name if letter.isalnum() or letter == '_')
         plugin_description = f'Extracts "{file_format}" files and attaches its low-level data structure as a JSON text to the trace.'
         plugin_info = PluginInfo(
-            id=PluginId(domain='communityportal.hansken.org', category='extract', name=plugin_name),
+            id=PluginId(domain='{YOUR_ORGANISATION_DOMAIN}', category='extract', name=plugin_name),
             version='1.0.0',
             description=plugin_description,
-            author=Author('Jan', 'my@email.address', 'pim organisation'),
+            author=Author('{YOUR_NAME}', '{YOUR_EMAIL_ADDRESS}', '{YOUR_ORGANISATION}'),
             maturity=MaturityLevel.PROOF_OF_CONCEPT,
             webpage_url='',  # e.g. url to the code repository of your plugin
-            matcher='$data.mimeClass=archive',  # add the query for the firefli types of files your plugin should match
+            # the matcher specifies in HQL-Lite which traces will be processed by this plugin
+            #  e.g. $data.fileType=AppleDouble
+            # see also https://netherlandsforensicinstitute.github.io/hansken-extraction-plugin-sdk-documentation/latest/dev/concepts/hql_lite.html#how-to-write-a-matcher
+            matcher='$data.fileType={FILETYPE_PROPERTY}',  
             license='Apache License 2.0'
         )
         return plugin_info
