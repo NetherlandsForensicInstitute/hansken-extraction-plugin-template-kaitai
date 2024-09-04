@@ -46,11 +46,17 @@ def _get_metadata():
 def token_has_process2(object):
     if type(object) is dict:
         for key in object.keys():
-            return 'process' in object or token_has_process2(object[key])
+            if 'process' in object:
+                return True
+            if type(object[key]) is list or type(object[key]) is dict:
+                 if token_has_process2(object[key]):
+                     return True
     elif type(object) is list:
         for item in object:
-            return False or token_has_process2(item)
-    else:
+            if type(item) is list or type(item) is dict:
+                if token_has_process2(item):
+                    return True
+    return False
 
 
 
