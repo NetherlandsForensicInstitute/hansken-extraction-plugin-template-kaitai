@@ -13,6 +13,13 @@ from kaitaistruct import KaitaiStruct
 import yaml
 
 
+def write_kaitai_to_trace(trace: ExtractionTrace):
+    with trace.open(data_type='text', mode='wb') as writer, trace.open() as data:
+        kaitaiclass = get_kaitai_class()
+        kaitai_to_trace_writer = KaitaiToTraceWriter(writer, trace)
+        kaitai_to_trace_writer.write_to_trace(data, kaitaiclass)
+
+
 def _get_ksy_file():
     path = os.path.relpath(os.path.join(os.path.dirname(__file__), 'structs'))
     # path = 'structs'
@@ -53,7 +60,7 @@ def get_kaitai_class():
         inspect.getmembers(import_result)))[0][1]
 
 
-class JsonWriter:
+class KaitaiToTraceWriter:
     def __init__(self, writer: BufferedWriter, trace: ExtractionTrace):
         self.writer = writer
         self.trace = trace
@@ -77,7 +84,7 @@ class JsonWriter:
         """
         parameters_dict = _parameters_dict(instance)
         for key, value_object in parameters_dict.items():
-            if is_public_property(key, value_object):
+            if _is_public_property(key, value_object):
                 if _is_kaitai_struct(value_object):
                     yield _to_lower_camel_case(key), self._object_to_dict(value_object, path + '.' + key)
                 elif _is_list(value_object):
@@ -102,7 +109,7 @@ class JsonWriter:
         parsed_kaitai_struct = class_type.from_io(data_binary)
         return json.dumps(self._object_to_dict(parsed_kaitai_struct, path), indent=2)
 
-    def write_to_json(self, data_binary: BinaryIO, class_type: Type[KaitaiStruct], path='$'):
+    def write_to_trace(self, data_binary: BinaryIO, class_type: Type[KaitaiStruct], path='$'):
         """
         Writes a binary form of JSON string into a BufferedWriter
 
@@ -114,7 +121,7 @@ class JsonWriter:
         self.writer.write(bytes(self.to_json_string(data_binary, class_type, path), "utf-8"))
 
 
-def is_public_property(key: str, value: Any):
+def _is_public_property(key: str, value: Any):
     return not key.startswith("_") and value is not None
 
 
