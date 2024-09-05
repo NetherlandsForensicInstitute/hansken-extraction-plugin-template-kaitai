@@ -13,7 +13,6 @@ from kaitaistruct import KaitaiStruct
 import yaml
 
 
-
 def write_kaitai_to_trace(trace: ExtractionTrace, max_byte_array_length: int):
     """
     This method creates traces from a kaitai object tree. It results in a trace containing a JSON representation of the
