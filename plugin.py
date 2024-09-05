@@ -5,7 +5,6 @@ from logbook import Logger
 
 import kaitai_utils
 
-
 log = Logger(__name__)
 
 
@@ -26,14 +25,13 @@ class Plugin(ExtractionPlugin):
             # the matcher specifies in HQL-Lite which traces will be processed by this plugin
             #  e.g. $data.fileType=AppleDouble
             # see also https://netherlandsforensicinstitute.github.io/hansken-extraction-plugin-sdk-documentation/latest/dev/concepts/hql_lite.html#how-to-write-a-matcher
-            matcher='$data.fileType={FILETYPE_PROPERTY}',  
+            matcher='$data.fileType={FILETYPE_PROPERTY}',
             license='Apache License 2.0'
         )
         return plugin_info
 
     def process(self, trace, data_context):
-        with trace.open(data_type='text', mode='wb') as writer:
-            kaitai_utils.write_to_json(trace.open(), writer, kaitai_utils.get_kaitai_class())
+        kaitai_utils.write_kaitai_to_trace(trace)
 
 
 if __name__ == '__main__':
