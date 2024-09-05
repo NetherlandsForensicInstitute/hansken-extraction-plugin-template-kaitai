@@ -7,6 +7,8 @@ import kaitai_utils
 
 log = Logger(__name__)
 
+BYTE_ARRAY_LENGTH = 256
+
 
 class Plugin(ExtractionPlugin):
 
@@ -33,9 +35,8 @@ class Plugin(ExtractionPlugin):
     def process(self, trace, data_context):
         # byte arrays shorter than byte_array_length are written as hex in the resulting JSON, longer ones are written
         # to child traces. Change it if necessary!
-        byte_array_length = 256
 
-        kaitai_utils.write_kaitai_to_trace(trace, byte_array_length)
+        kaitai_utils.write_kaitai_to_trace(trace, BYTE_ARRAY_LENGTH)
 
 
 if __name__ == '__main__':
