@@ -1,18 +1,17 @@
 import enum
 import importlib
 import inspect
-from io import BufferedWriter
+import json
 import os
+from io import BufferedWriter
 from typing import Any, BinaryIO, Dict, Generator, List, Type
 
 import hansken_extraction_plugin
+import yaml
 from hansken_extraction_plugin.api.extraction_trace import ExtractionTrace
-import json
-
 from hansken_extraction_plugin.api.transformation import RangedTransformation, Range
 from json_stream import streamable_dict, streamable_list
 from kaitaistruct import KaitaiStruct
-import yaml
 
 
 def write_kaitai_to_trace(trace: ExtractionTrace, max_byte_array_length: int):
@@ -47,16 +46,16 @@ def _get_metadata():
         return yaml.safe_load(file)['meta']
 
 
-def search_process_key(object):
-    if type(object) is dict:
-        for key in object.keys():
-            if 'process' in object:
+def search_process_key(searchable_object):
+    if type(searchable_object) is dict:
+        for key in searchable_object.keys():
+            if 'process' in searchable_object:
                 return True
-            if type(object[key]) is list or type(object[key]) is dict:
-                if search_process_key(object[key]):
+            if type(searchable_object[key]) in [list, dict]:
+                if search_process_key(searchable_object[key]):
                     return True
-    elif type(object) is list:
-        for item in object:
+    elif type(searchable_object) is list:
+        for item in searchable_object:
             if type(item) is list or type(item) is dict:
                 if search_process_key(item):
                     return True
@@ -104,10 +103,10 @@ class _KaitaiToTraceWriter:
         tuple[str, Any], None, None]:
 
         for value_index, value in enumerate(object_list):
-            yield self._object_to_dict(value, path + f'.[{value_index}]', None)
+            yield self._object_to_dict(value, path + f'.[{value_index}]')
 
     @streamable_dict
-    def _object_to_dict(self, instance: Any, path: str, _debug: Any) -> Generator[Dict[str, Any], None, None]:
+    def _object_to_dict(self, instance: Any, path: str) -> Generator[Dict[str, Any], None, None]:
         """
         Recursive helper method that converts an object from the Kaitai tree to (key, value) pairs that are put in
         the resulting JSON file.
@@ -127,7 +126,7 @@ class _KaitaiToTraceWriter:
             if not _is_public_property(key, value_object):
                 continue
             if _is_kaitai_struct(value_object):
-                yield _to_lower_camel_case(key), self._object_to_dict(value_object, path + '.' + key, new_debug)
+                yield _to_lower_camel_case(key), self._object_to_dict(value_object, path + '.' + key)
             elif _is_list(value_object):
                 yield _to_lower_camel_case(key), self._list_to_dict(value_object, path)
             elif isinstance(value_object, bytes):
@@ -139,10 +138,10 @@ class _KaitaiToTraceWriter:
                             child_builder.update(data={'raw': value_object}).build()
                             yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
                         else:
-                            yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
                             child_builder.add_transformation('raw', RangedTransformation(
                             [Range(new_debug[key]['start'], length)]))
                             child_builder.build()
+                            yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
                     else:
                         yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (not added as child trace because size exceeds MAX_CHUNK_SIZE)'
                 else:
@@ -155,19 +154,19 @@ class _KaitaiToTraceWriter:
         Parses a binary data object to a JSON string
 
         @param data_binary: binary data containing the file content
-        @param class_type: class that contains the parsing to a KaiTai struct
+        @param class_type: class that contains the parsing to a Kaitai struct
         @param path: string representing the jsonpath to the current entry in the object tree
         @return: JSON string representing contents of data object
         """
         parsed_kaitai_struct = class_type.from_io(data_binary)
-        return json.dumps(self._object_to_dict(parsed_kaitai_struct, path, None), indent=2)
+        return json.dumps(self._object_to_dict(parsed_kaitai_struct, path), indent=2)
 
     def write_to_trace(self, data_binary: BinaryIO, class_type: Type[KaitaiStruct], path='$'):
         """
         Writes a binary form of JSON string into a BufferedWriter
 
         @param data_binary: binary data containing the file content
-        @param class_type: class that contains the parsing to a KaiTai struct
+        @param class_type: class that contains the parsing to a Kaitai struct
         @param path: string representing the jsonpath to the current entry in the object tree
         @return: JSON string representing contents of data object
         """

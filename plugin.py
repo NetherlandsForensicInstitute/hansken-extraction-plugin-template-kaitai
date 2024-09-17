@@ -1,11 +1,9 @@
 from hansken_extraction_plugin.api.extraction_plugin import ExtractionPlugin
 from hansken_extraction_plugin.api.plugin_info import Author, MaturityLevel, PluginId, PluginInfo
 from hansken_extraction_plugin.runtime.extraction_plugin_runner import run_with_hanskenpy
-from hansken_extraction_plugin.test_framework.test_plugin import _test_validate_standalone
 from logbook import Logger
 
 import kaitai_utils
-
 
 log = Logger(__name__)
 
@@ -20,10 +18,10 @@ class Plugin(ExtractionPlugin):
         plugin_name = ''.join(letter for letter in no_space_plugin_name if letter.isalnum() or letter == '_')
         plugin_description = f'Extracts "{file_format}" files and attaches its low-level data structure as a JSON text to the trace.'
         plugin_info = PluginInfo(
-            id=PluginId(domain='{YOUR_ORGANISATION_DOMAIN}', category='extract', name=plugin_name),
-            version='1.0.0',
+            id=PluginId(domain='nfi', category='extract', name=plugin_name),
+            version='1.3.0',
             description=plugin_description,
-            author=Author('{YOUR_NAME}', '{YOUR_EMAIL_ADDRESS}', '{YOUR_ORGANISATION}'),
+            author=Author('Luuk', 'luuk@luuk.com', 'nfi'),
             maturity=MaturityLevel.PROOF_OF_CONCEPT,
             webpage_url='',  # e.g. url to the code repository of your plugin
             # the matcher specifies in HQL-Lite which traces will be processed by this plugin
