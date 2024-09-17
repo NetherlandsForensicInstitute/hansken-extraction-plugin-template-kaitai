@@ -15,12 +15,13 @@ from kaitaistruct import KaitaiStruct
 import yaml
 
 
-
 def write_kaitai_to_trace(trace: ExtractionTrace, max_byte_array_length: int):
     """
     This method creates traces from a kaitai object tree. It results in a trace containing a JSON representation of the
     object tree and potential child traces containing byte arrays.
     @param trace: ExtractionTrace provided to the plugin. Child traces are added to this.
+    @param max_byte_array_length: byte arrays longer than max_byte_array_length are stored as child traces, shorter ones
+    are put into the resulting JSON file.
     """
 
     with trace.open(data_type='text', mode='wb') as writer, trace.open() as data:
