@@ -63,7 +63,7 @@ def search_process_key(object):
     return False
 
 
-def token_has_process():
+def _token_has_process():
     with open(_get_ksy_file(), 'r') as file:
         toplevel_dict = yaml.safe_load(file)
         return search_process_key(toplevel_dict)
@@ -97,7 +97,7 @@ class _KaitaiToTraceWriter:
         self.writer = writer
         self.trace = trace
         self.max_byte_array_length = max_byte_array_length
-        self.has_process = token_has_process()
+        self.has_process = _token_has_process()
 
     @streamable_list
     def _list_to_dict(self, object_list: List[Any], path: str) -> Generator[
@@ -116,6 +116,7 @@ class _KaitaiToTraceWriter:
 
         @param instance: object that needs parsing to dictionary
         @param path: string representing the jsonpath to the current node in the object tree
+        @param _debug: this parameter contains the offset at which data was read from the original input stream
         @return: dictionary containing parsed fields and their respective parsed values in a dictionary
         """
         new_debug = None
@@ -123,30 +124,31 @@ class _KaitaiToTraceWriter:
         if '_debug' in parameters_dict:
             new_debug = parameters_dict['_debug']
         for key, value_object in parameters_dict.items():
-            if _is_public_property(key, value_object):
-                if _is_kaitai_struct(value_object):
-                    yield _to_lower_camel_case(key), self._object_to_dict(value_object, path + '.' + key, new_debug)
-                elif _is_list(value_object):
-                    yield _to_lower_camel_case(key), self._list_to_dict(value_object, path)
-                elif isinstance(value_object, bytes):
-                    if len(value_object) > self.max_byte_array_length:
-                        if len(value_object) < hansken_extraction_plugin.runtime.constants.MAX_CHUNK_SIZE:
-                            length = new_debug[key]['end'] - new_debug[key]['start']
-                            child_builder = self.trace.child_builder(path)
-                            if self.has_process:
-                                child_builder.update(data={'raw': value_object}).build()
-                                yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
-                            else:
-                                yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
-                                child_builder.add_transformation('raw', RangedTransformation(
-                                [Range(new_debug[key]['start'], length)]))
-                                child_builder.build()
+            if not _is_public_property(key, value_object):
+                continue
+            if _is_kaitai_struct(value_object):
+                yield _to_lower_camel_case(key), self._object_to_dict(value_object, path + '.' + key, new_debug)
+            elif _is_list(value_object):
+                yield _to_lower_camel_case(key), self._list_to_dict(value_object, path)
+            elif isinstance(value_object, bytes):
+                if len(value_object) > self.max_byte_array_length:
+                    if len(value_object) < hansken_extraction_plugin.runtime.constants.MAX_CHUNK_SIZE:
+                        length = new_debug[key]['end'] - new_debug[key]['start']
+                        child_builder = self.trace.child_builder(path)
+                        if self.has_process:
+                            child_builder.update(data={'raw': value_object}).build()
+                            yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
                         else:
-                            yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (not added as child trace because size exceeds MAX_CHUNK_SIZE)'
+                            yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
+                            child_builder.add_transformation('raw', RangedTransformation(
+                            [Range(new_debug[key]['start'], length)]))
+                            child_builder.build()
                     else:
-                        yield _to_lower_camel_case(key), value_object.hex()
+                        yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (not added as child trace because size exceeds MAX_CHUNK_SIZE)'
                 else:
-                    yield _to_lower_camel_case(key), _process_value(value_object)
+                    yield _to_lower_camel_case(key), value_object.hex()
+            else:
+                yield _to_lower_camel_case(key), _process_value(value_object)
 
     def to_json_string(self, data_binary: BinaryIO, class_type: Type[KaitaiStruct], path: str) -> str:
         """
