@@ -46,18 +46,18 @@ def _get_metadata():
         return yaml.safe_load(file)['meta']
 
 
-def search_process_key(searchable_object):
+def object_has_process_key(searchable_object):
     if type(searchable_object) is dict:
         for key in searchable_object.keys():
             if 'process' in searchable_object:
                 return True
             if type(searchable_object[key]) in [list, dict]:
-                if search_process_key(searchable_object[key]):
+                if object_has_process_key(searchable_object[key]):
                     return True
     elif type(searchable_object) is list:
         for item in searchable_object:
             if type(item) is list or type(item) is dict:
-                if search_process_key(item):
+                if object_has_process_key(item):
                     return True
     return False
 
@@ -65,7 +65,7 @@ def search_process_key(searchable_object):
 def _token_has_process():
     with open(_get_ksy_file(), 'r') as file:
         toplevel_dict = yaml.safe_load(file)
-        return search_process_key(toplevel_dict)
+        return object_has_process_key(toplevel_dict)
 
 
 def get_plugin_title_from_metadata():
@@ -115,13 +115,12 @@ class _KaitaiToTraceWriter:
 
         @param instance: object that needs parsing to dictionary
         @param path: string representing the jsonpath to the current node in the object tree
-        @param _debug: this parameter contains the offset at which data was read from the original input stream
         @return: dictionary containing parsed fields and their respective parsed values in a dictionary
         """
-        new_debug = None
+        offsets = None
         parameters_dict = _parameters_dict(instance)
         if '_debug' in parameters_dict:
-            new_debug = parameters_dict['_debug']
+            offsets = parameters_dict['_debug']
         for key, value_object in parameters_dict.items():
             if not _is_public_property(key, value_object):
                 continue
@@ -130,24 +129,35 @@ class _KaitaiToTraceWriter:
             elif _is_list(value_object):
                 yield _to_lower_camel_case(key), self._list_to_dict(value_object, path)
             elif isinstance(value_object, bytes):
-                if len(value_object) > self.max_byte_array_length:
-                    if len(value_object) < hansken_extraction_plugin.runtime.constants.MAX_CHUNK_SIZE:
-                        length = new_debug[key]['end'] - new_debug[key]['start']
-                        child_builder = self.trace.child_builder(path)
-                        if self.has_process:
-                            child_builder.update(data={'raw': value_object}).build()
-                            yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
-                        else:
-                            child_builder.add_transformation('raw', RangedTransformation(
-                            [Range(new_debug[key]['start'], length)]))
-                            child_builder.build()
-                            yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
-                    else:
-                        yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (not added as child trace because size exceeds MAX_CHUNK_SIZE)'
-                else:
-                    yield _to_lower_camel_case(key), value_object.hex()
+                self._process_bytes(value_object, offsets, path, key)
             else:
                 yield _to_lower_camel_case(key), _process_value(value_object)
+
+    def _process_bytes(self, value_object, offsets, path, key):
+        """
+        Method responsible for converting a byte array from the Kaitai object tree to a trace if necessary and / or putting
+        it in the resulting JSON output.
+
+        @param value_object: part of the Kaitai object tree that represents a byte array
+        @param offsets: the offsets at which the byte array was read in the original inputData
+        @param path: JSONpath to this object in the resulting JSON
+        @param key: key at which value_object was stored in the Kaitai object tree
+        """
+        if len(value_object) > self.max_byte_array_length:
+            if len(value_object) < hansken_extraction_plugin.runtime.constants.MAX_CHUNK_SIZE:
+                length = offsets[key]['end'] - offsets[key]['start']
+                child_builder = self.trace.child_builder(path)
+                if self.has_process:
+                    child_builder.update(data={'raw': value_object}).build()
+                    yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
+                else:
+                    child_builder.add_transformation('raw', RangedTransformation([Range(offsets[key]['start'], length)]))
+                    child_builder.build()
+                    yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
+            else:
+                yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (not added as child trace because size exceeds MAX_CHUNK_SIZE)'
+        else:
+            yield _to_lower_camel_case(key), value_object.hex()
 
     def to_json_string(self, data_binary: BinaryIO, class_type: Type[KaitaiStruct], path: str) -> str:
         """
