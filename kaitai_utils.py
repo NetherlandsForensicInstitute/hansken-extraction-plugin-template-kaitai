@@ -46,18 +46,18 @@ def _get_metadata():
         return yaml.safe_load(file)['meta']
 
 
-def object_has_process_key(searchable_object):
+def _object_has_process_key(searchable_object):
     if type(searchable_object) is dict:
         for key in searchable_object.keys():
             if 'process' in searchable_object:
                 return True
             if type(searchable_object[key]) in [list, dict]:
-                if object_has_process_key(searchable_object[key]):
+                if _object_has_process_key(searchable_object[key]):
                     return True
     elif type(searchable_object) is list:
         for item in searchable_object:
-            if type(item) is list or type(item) is dict:
-                if object_has_process_key(item):
+            if type(item) in [list, dict]:
+                if _object_has_process_key(item):
                     return True
     return False
 
@@ -65,7 +65,7 @@ def object_has_process_key(searchable_object):
 def _token_has_process():
     with open(_get_ksy_file(), 'r') as file:
         toplevel_dict = yaml.safe_load(file)
-        return object_has_process_key(toplevel_dict)
+        return _object_has_process_key(toplevel_dict)
 
 
 def get_plugin_title_from_metadata():
