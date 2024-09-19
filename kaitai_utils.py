@@ -99,14 +99,13 @@ class _KaitaiToTraceWriter:
         self.has_process = _token_has_process()
 
     @streamable_list
-    def _list_to_dict(self, object_list: List[Any], path: str) -> Generator[
-        tuple[str, Any], None, None]:
+    def _list_to_dict(self, object_list: List[Any], path: str) -> Generator[tuple[str, Any], None, None]:
 
         for value_index, value in enumerate(object_list):
             yield self._object_to_dict(value, path + f'.[{value_index}]')
 
     @streamable_dict
-    def _object_to_dict(self, instance: Any, path: str) -> Generator[Dict[str, Any], None, None]:
+    def _object_to_dict(self, instance: Any, path: str) -> Generator[tuple[str, Any], None, None]:
         """
         Recursive helper method that converts an object from the Kaitai tree to (key, value) pairs that are put in
         the resulting JSON file.
@@ -129,11 +128,11 @@ class _KaitaiToTraceWriter:
             elif _is_list(value_object):
                 yield _to_lower_camel_case(key), self._list_to_dict(value_object, path)
             elif isinstance(value_object, bytes):
-                self._process_bytes(value_object, offsets, path, key)
+                yield self._process_bytes(value_object, offsets, path, key)
             else:
                 yield _to_lower_camel_case(key), _process_value(value_object)
 
-    def _process_bytes(self, value_object, offsets, path, key):
+    def _process_bytes(self, value_object, offsets, path, key) -> tuple[str, Any]:
         """
         Method responsible for converting a byte array from the Kaitai object tree to a trace if necessary and / or putting
         it in the resulting JSON output.
@@ -149,15 +148,16 @@ class _KaitaiToTraceWriter:
                 child_builder = self.trace.child_builder(path)
                 if self.has_process:
                     child_builder.update(data={'raw': value_object}).build()
-                    yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
+                    return _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
                 else:
                     child_builder.add_transformation('raw', RangedTransformation([Range(offsets[key]['start'], length)]))
                     child_builder.build()
-                    yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
+                    return _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
             else:
-                yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (not added as child trace because size exceeds MAX_CHUNK_SIZE)'
+                return _to_lower_camel_case(key), f'data block of size: {len(value_object)} (not added as child trace because size exceeds MAX_CHUNK_SIZE)'
         else:
-            yield _to_lower_camel_case(key), value_object.hex()
+            return _to_lower_camel_case(key), value_object.hex()
+
 
     def to_json_string(self, data_binary: BinaryIO, class_type: Type[KaitaiStruct], path: str) -> str:
         """
