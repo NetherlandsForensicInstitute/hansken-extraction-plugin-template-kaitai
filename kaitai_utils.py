@@ -9,7 +9,7 @@ from typing import Any, BinaryIO, Dict, Generator, List, Type
 import hansken_extraction_plugin
 import yaml
 from hansken_extraction_plugin.api.extraction_trace import ExtractionTrace
-from hansken_extraction_plugin.api.transformation import RangedTransformation, Range
+from hansken_extraction_plugin.api.transformation import Range, RangedTransformation
 from json_stream import streamable_dict, streamable_list
 from kaitaistruct import KaitaiStruct
 
@@ -47,6 +47,11 @@ def _get_metadata():
 
 
 def _object_has_process_key(searchable_object):
+    """
+    If an object in the Kaitai object tree has a key called 'process', it means code might have been executed to obtain
+    the final result stored in the object tree. This in turn means the offsets shown in _debug might be invalid, so we
+    choose not to use the offsets if any object in the tree has a 'process' key.
+    """
     if type(searchable_object) is dict:
         for key in searchable_object.keys():
             if 'process' in searchable_object:
@@ -128,7 +133,7 @@ class _KaitaiToTraceWriter:
             elif _is_list(value_object):
                 yield _to_lower_camel_case(key), self._list_to_dict(value_object, path)
             elif isinstance(value_object, bytes):
-                yield self._process_bytes(value_object, offsets, path, key)
+                yield self._process_bytes(value_object, offsets or {}, path, key)
             else:
                 yield _to_lower_camel_case(key), _process_value(value_object)
 
