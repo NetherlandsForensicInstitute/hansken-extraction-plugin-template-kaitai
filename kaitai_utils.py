@@ -132,7 +132,7 @@ class _KaitaiToTraceWriter:
             else:
                 yield _to_lower_camel_case(key), _process_value(value_object)
 
-    def _process_bytes(self, value_object, offsets, path, key) -> tuple[str, Any]:
+    def _process_bytes(self, value_object: Any, offsets: dict, path: str, key: str) -> tuple[str, Any]:
         """
         Method responsible for converting a byte array from the Kaitai object tree to a trace if necessary and / or putting
         it in the resulting JSON output.
@@ -146,7 +146,7 @@ class _KaitaiToTraceWriter:
             if len(value_object) < hansken_extraction_plugin.runtime.constants.MAX_CHUNK_SIZE:
                 length = offsets[key]['end'] - offsets[key]['start']
                 child_builder = self.trace.child_builder(path)
-                if self.has_process:
+                if self.has_process and offsets is not None:
                     child_builder.update(data={'raw': value_object}).build()
                     return _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
                 else:
