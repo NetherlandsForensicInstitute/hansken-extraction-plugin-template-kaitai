@@ -30,6 +30,14 @@ To transform this template into an implementation, we suggest to conduct the fol
 
 > **TIP!**\
 > If you want to run the plugin from your IDE, you can add the `.ksy` file and the manually compiled `.py` files to the [structs](./structs) folder.
+>
+> To compile a kaitai `.ksy` file to Python, use:
+> 
+> ```shell
+> kaitai-struct-compiler structs/*.ksy -t python --python-package structs --read-pos -- -d structs`
+> ```
+> 
+> Note the `--read-pos` argument, which ensures that large binary values are stored efficiently in Hansken.
 
 > **WARNING!**\
 > Successful implementations of this template have only been tested on small object trees and small byte arrays. Stability and performance for large object trees and byte arrays is not guaranteed.
