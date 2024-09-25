@@ -26,7 +26,7 @@ RUN pip install -Ur /requirements.txt
 COPY structs/* /structs/
 RUN if [ "$(find ./structs/ -type f -name '*.ksy' | wc -l)" -ne 1 ]; then \
   (echo 'please put exactly one .ksy file in the struct-folder' && exit 1) ; fi
-RUN cd structs && ../kaitai-struct-compiler-0.10/bin/kaitai-struct-compiler *.ksy -t python --python-package structs
+RUN cd structs && ../kaitai-struct-compiler-0.10/bin/kaitai-struct-compiler *.ksy -t python --python-package structs --read-pos
 
 
 ###############################################################################
