@@ -13,17 +13,18 @@ from kaitaistruct import KaitaiStruct
 import yaml
 
 
-
-def write_kaitai_to_trace(trace: ExtractionTrace):
+def write_kaitai_to_trace(trace: ExtractionTrace, max_byte_array_length: int):
     """
     This method creates traces from a kaitai object tree. It results in a trace containing a JSON representation of the
     object tree and potential child traces containing byte arrays.
     @param trace: ExtractionTrace provided to the plugin. Child traces are added to this.
+    @param max_byte_array_length: byte arrays longer than max_byte_array_length are stored as child traces, shorter ones
+    are put into the resulting JSON file.
     """
 
     with trace.open(data_type='text', mode='wb') as writer, trace.open() as data:
         kaitaiclass = _get_kaitai_class()
-        kaitai_to_trace_writer = _KaitaiToTraceWriter(writer, trace)
+        kaitai_to_trace_writer = _KaitaiToTraceWriter(writer, trace, max_byte_array_length)
         kaitai_to_trace_writer.write_to_trace(data, kaitaiclass)
 
 
@@ -68,9 +69,10 @@ def _get_kaitai_class():
 
 
 class _KaitaiToTraceWriter:
-    def __init__(self, writer: BufferedWriter, trace: ExtractionTrace):
+    def __init__(self, writer: BufferedWriter, trace: ExtractionTrace, max_byte_array_length: int):
         self.writer = writer
         self.trace = trace
+        self.max_byte_array_length = max_byte_array_length
 
     @streamable_list
     def _list_to_dict(self, object_list: List[Any], path: str) -> Generator[
@@ -81,7 +83,8 @@ class _KaitaiToTraceWriter:
     @streamable_dict
     def _object_to_dict(self, instance: Any, path: str) -> Generator[Dict[str, Any], None, None]:
         """
-        Recursive helper method that parses an object to a dictionary.
+        Recursive helper method that converts an object from the Kaitai tree to (key, value) pairs that are put in
+        the resulting JSON file.
         Key: The parameters and property method names
         Value: The parsed value or returning values of the fields and property method names
 
@@ -91,18 +94,28 @@ class _KaitaiToTraceWriter:
         """
         parameters_dict = _parameters_dict(instance)
         for key, value_object in parameters_dict.items():
-            if _is_public_property(key, value_object):
-                if _is_kaitai_struct(value_object):
-                    yield _to_lower_camel_case(key), self._object_to_dict(value_object, path + '.' + key)
-                elif _is_list(value_object):
-                    yield _to_lower_camel_case(key), self._list_to_dict(value_object, path)
-                elif isinstance(value_object, bytes):
-                    if len(value_object) < hansken_extraction_plugin.runtime.constants.MAX_CHUNK_SIZE:
-                        child_builder = self.trace.child_builder(path)
-                        child_builder.update(data={'raw': value_object}).build()
-                    yield _to_lower_camel_case(key), "data block of size: " + str(len(value_object))
-                else:
-                    yield _to_lower_camel_case(key), _process_value(value_object)
+            if not _is_public_property(key, value_object):
+                continue
+            if _is_kaitai_struct(value_object):
+                yield _to_lower_camel_case(key), self._object_to_dict(value_object, path + '.' + key)
+            elif _is_list(value_object):
+                yield _to_lower_camel_case(key), self._list_to_dict(value_object, path)
+            elif isinstance(value_object, bytes):
+                yield self.process_byte_array(value_object, path, key)
+            else:
+                yield _to_lower_camel_case(key), _process_value(value_object)
+
+    def process_byte_array(self, value_object: bytes, path: str, key: str):
+        if len(value_object) > self.max_byte_array_length:
+            if len(value_object) < hansken_extraction_plugin.runtime.constants.MAX_CHUNK_SIZE:
+                child_builder = self.trace.child_builder(path)
+                child_builder.update(data={'raw': value_object}).build()
+                yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
+            else:
+                yield _to_lower_camel_case(
+                    key), f'data block of size: {len(value_object)} (not added as child trace because size exceeds MAX_CHUNK_SIZE)'
+        else:
+            yield _to_lower_camel_case(key), value_object.hex()
 
     def to_json_string(self, data_binary: BinaryIO, class_type: Type[KaitaiStruct], path: str) -> str:
         """
@@ -134,7 +147,7 @@ def _is_public_property(key: str, value: Any):
 
 def _parameters_dict(instance: Any) -> Dict[str, Any]:
     """
-    Helper method that parses an object to a dictionary.
+    Helper method that parses an object in the Kaitai object tree to a dictionary.
     Key: The parameters and property method names
     Value: The original value or returning values of the original fields and property method names
 
