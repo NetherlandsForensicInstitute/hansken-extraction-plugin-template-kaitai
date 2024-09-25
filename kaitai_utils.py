@@ -1,16 +1,17 @@
 import enum
 import importlib
 import inspect
-from io import BufferedWriter
+import json
 import os
+from io import BufferedWriter
 from typing import Any, BinaryIO, Dict, Generator, List, Type
 
 import hansken_extraction_plugin
+import yaml
 from hansken_extraction_plugin.api.extraction_trace import ExtractionTrace
-import json
+from hansken_extraction_plugin.api.transformation import Range, RangedTransformation
 from json_stream import streamable_dict, streamable_list
 from kaitaistruct import KaitaiStruct
-import yaml
 
 
 def write_kaitai_to_trace(trace: ExtractionTrace, max_byte_array_length: int):
@@ -45,6 +46,33 @@ def _get_metadata():
         return yaml.safe_load(file)['meta']
 
 
+def _object_has_process_key(searchable_object):
+    """
+    If an object in the Kaitai object tree has a key called 'process', it means code might have been executed to obtain
+    the final result stored in the object tree. This in turn means the offsets shown in _debug might be invalid, so we
+    choose not to use the offsets if any object in the tree has a 'process' key.
+    """
+    if type(searchable_object) is dict:
+        for key in searchable_object.keys():
+            if 'process' in searchable_object:
+                return True
+            if type(searchable_object[key]) in [list, dict]:
+                if _object_has_process_key(searchable_object[key]):
+                    return True
+    elif type(searchable_object) is list:
+        for item in searchable_object:
+            if type(item) in [list, dict]:
+                if _object_has_process_key(item):
+                    return True
+    return False
+
+
+def _token_has_process():
+    with open(_get_ksy_file(), 'r') as file:
+        toplevel_dict = yaml.safe_load(file)
+        return _object_has_process_key(toplevel_dict)
+
+
 def get_plugin_title_from_metadata():
     metadata = _get_metadata()
     title = metadata['title'] if 'title' in metadata else metadata['id']
@@ -73,15 +101,16 @@ class _KaitaiToTraceWriter:
         self.writer = writer
         self.trace = trace
         self.max_byte_array_length = max_byte_array_length
+        self.has_process = _token_has_process()
 
     @streamable_list
-    def _list_to_dict(self, object_list: List[Any], path: str) -> Generator[
-        tuple[str, Any], None, None]:
+    def _list_to_dict(self, object_list: List[Any], path: str) -> Generator[tuple[str, Any], None, None]:
+
         for value_index, value in enumerate(object_list):
             yield self._object_to_dict(value, path + f'.[{value_index}]')
 
     @streamable_dict
-    def _object_to_dict(self, instance: Any, path: str) -> Generator[Dict[str, Any], None, None]:
+    def _object_to_dict(self, instance: Any, path: str) -> Generator[tuple[str, Any], None, None]:
         """
         Recursive helper method that converts an object from the Kaitai tree to (key, value) pairs that are put in
         the resulting JSON file.
@@ -92,7 +121,10 @@ class _KaitaiToTraceWriter:
         @param path: string representing the jsonpath to the current node in the object tree
         @return: dictionary containing parsed fields and their respective parsed values in a dictionary
         """
+        offsets = None
         parameters_dict = _parameters_dict(instance)
+        if '_debug' in parameters_dict:
+            offsets = parameters_dict['_debug']
         for key, value_object in parameters_dict.items():
             if not _is_public_property(key, value_object):
                 continue
@@ -101,28 +133,43 @@ class _KaitaiToTraceWriter:
             elif _is_list(value_object):
                 yield _to_lower_camel_case(key), self._list_to_dict(value_object, path)
             elif isinstance(value_object, bytes):
-                yield self.process_byte_array(value_object, path, key)
+                yield self._process_bytes(value_object, offsets or {}, path, key)
             else:
                 yield _to_lower_camel_case(key), _process_value(value_object)
 
-    def process_byte_array(self, value_object: bytes, path: str, key: str):
+    def _process_bytes(self, value_object: Any, offsets: dict, path: str, key: str) -> tuple[str, Any]:
+        """
+        Method responsible for converting a byte array from the Kaitai object tree to a trace if necessary and / or putting
+        it in the resulting JSON output.
+
+        @param value_object: part of the Kaitai object tree that represents a byte array
+        @param offsets: the offsets at which the byte array was read in the original inputData
+        @param path: JSONpath to this object in the resulting JSON
+        @param key: key at which value_object was stored in the Kaitai object tree
+        """
         if len(value_object) > self.max_byte_array_length:
             if len(value_object) < hansken_extraction_plugin.runtime.constants.MAX_CHUNK_SIZE:
+                length = offsets[key]['end'] - offsets[key]['start']
                 child_builder = self.trace.child_builder(path)
-                child_builder.update(data={'raw': value_object}).build()
-                yield _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
+                if self.has_process and offsets is not None:
+                    child_builder.update(data={'raw': value_object}).build()
+                    return _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
+                else:
+                    child_builder.add_transformation('raw', RangedTransformation([Range(offsets[key]['start'], length)]))
+                    child_builder.build()
+                    return _to_lower_camel_case(key), f'data block of size: {len(value_object)} (stored as {path})'
             else:
-                yield _to_lower_camel_case(
-                    key), f'data block of size: {len(value_object)} (not added as child trace because size exceeds MAX_CHUNK_SIZE)'
+                return _to_lower_camel_case(key), f'data block of size: {len(value_object)} (not added as child trace because size exceeds MAX_CHUNK_SIZE)'
         else:
-            yield _to_lower_camel_case(key), value_object.hex()
+            return _to_lower_camel_case(key), value_object.hex()
+
 
     def to_json_string(self, data_binary: BinaryIO, class_type: Type[KaitaiStruct], path: str) -> str:
         """
         Parses a binary data object to a JSON string
 
         @param data_binary: binary data containing the file content
-        @param class_type: class that contains the parsing to a KaiTai struct
+        @param class_type: class that contains the parsing to a Kaitai struct
         @param path: string representing the jsonpath to the current entry in the object tree
         @return: JSON string representing contents of data object
         """
@@ -134,7 +181,7 @@ class _KaitaiToTraceWriter:
         Writes a binary form of JSON string into a BufferedWriter
 
         @param data_binary: binary data containing the file content
-        @param class_type: class that contains the parsing to a KaiTai struct
+        @param class_type: class that contains the parsing to a Kaitai struct
         @param path: string representing the jsonpath to the current entry in the object tree
         @return: JSON string representing contents of data object
         """
