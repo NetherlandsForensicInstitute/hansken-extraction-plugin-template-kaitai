@@ -1,4 +1,4 @@
-hansken-extraction-plugin==0.8.1
+hansken-extraction-plugin==0.10.0
 kaitaistruct
 json_stream
 pyyaml
